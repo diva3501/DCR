@@ -5,8 +5,8 @@ import requests
 app = Flask(__name__)
 
 # API Keys (replace with your actual keys)
-TOMTOM_API_KEY = "your_tomtom_api_key"
-AQICN_API_KEY = "your_aqicn_api_key"
+TOMTOM_API_KEY = "MVKuv3pCsGAtSHNdjQ7JIj9yorWXSkiQ"
+AQICN_API_KEY = "bfd17d0a7a3265bb140f9341cbd22581f0631a98"
 
 @app.route('/')
 def dashboard():
