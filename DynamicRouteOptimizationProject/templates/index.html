@@ -1,8 +1,32 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Route Optimization</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Dynamic Route Optimization</h1>
+        <form id="routeForm">
+            <label for="start">Start Coordinates (lat,lon):</label>
+            <input type="text" id="start" name="start" required placeholder="e.g., 52.376,4.894">
 
-{% block content %}
-<h1>Welcome to Dynamic Route Optimization</h1>
-<div class="card">
-    <p>Optimize your routes in real-time and reduce emissions!</p>
-</div>
-{% endblock %}
+            <label for="end">End Coordinates (lat,lon):</label>
+            <input type="text" id="end" name="end" required placeholder="e.g., 48.8566,2.3522">
+
+            <label for="vehicle">Vehicle Type:</label>
+            <select id="vehicle" name="vehicle_type">
+                <option value="car">Car</option>
+                <option value="truck">Truck</option>
+                <option value="motorcycle">Motorcycle</option>
+            </select>
+
+            <button type="submit">Get Optimal Route</button>
+        </form>
+        <div id="results"></div>
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>
