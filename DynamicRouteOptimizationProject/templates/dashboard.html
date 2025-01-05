@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container mt-4">
+        <h2>Route and Emission Calculator</h2>
+        <form id="routeForm">
+            <div class="mb-3">
+                <label for="start" class="form-label">Start Coordinates</label>
+                <input type="text" class="form-control" id="start" placeholder="e.g., 13.0827,80.2707">
+            </div>
+            <div class="mb-3">
+                <label for="end" class="form-label">End Coordinates</label>
+                <input type="text" class="form-control" id="end" placeholder="e.g., 12.9165,79.1325">
+            </div>
+            <div class="mb-3">
+                <label for="vehicle_type" class="form-label">Vehicle Type</label>
+                <select class="form-control" id="vehicle_type">
+                    <option value="car">Car</option>
+                    <option value="truck">Truck</option>
+                    <option value="motorcycle">Motorcycle</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Calculate</button>
+        </form>
+        <div class="mt-4" id="results"></div>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
