@@ -21,6 +21,7 @@ def get_route():
     start = data.get('start')  # Latitude,Longitude
     end = data.get('end')      # Latitude,Longitude
     vehicle_type = data.get('vehicle_type', 'car')
+    fuel_type = data.get('fuel_type', 'petrol')
 
     try:
         # Fetch route from TomTom API
@@ -28,26 +29,38 @@ def get_route():
         tomtom_response = requests.get(tomtom_url)
         tomtom_data = tomtom_response.json()
 
-        # Extract distance
+        # Extract distance and duration
         distance_km = tomtom_data['routes'][0]['summary']['lengthInMeters'] / 1000
+        duration_min = tomtom_data['routes'][0]['summary']['travelTimeInSeconds'] / 60
 
         # Estimate emissions
-        emissions_kg = estimate_emissions(distance_km, vehicle_type)
+        emissions_kg = estimate_emissions(distance_km, vehicle_type, fuel_type)
+
+        # Fetch weather data from AQICN
+        lat, lon = start.split(',')
+        weather_url = f"https://api.waqi.info/feed/geo:{lat};{lon}/?token={AQICN_API_KEY}"
+        weather_response = requests.get(weather_url)
+        weather_data = weather_response.json()
+        weather = weather_data.get('data', {}).get('aqi', 'Unavailable')
 
         return jsonify({
-            "route_summary": tomtom_data['routes'][0]['summary'],
+            "route_summary": {
+                "distance_km": distance_km,
+                "duration_min": duration_min,
+                "weather": weather,
+            },
             "emissions": emissions_kg
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-def estimate_emissions(distance_km, vehicle_type):
+def estimate_emissions(distance_km, vehicle_type, fuel_type):
     emissions_per_km = {
-        "car": 0.121,    # 121 grams per km
-        "truck": 0.185,  # 185 grams per km
-        "motorcycle": 0.055  # 55 grams per km
+        "car": {"petrol": 0.121, "diesel": 0.145, "electric": 0.05},
+        "truck": {"petrol": 0.185, "diesel": 0.22, "electric": 0.08},
+        "motorcycle": {"petrol": 0.055, "diesel": 0.07, "electric": 0.02}
     }
-    return emissions_per_km.get(vehicle_type, 0.121) * distance_km
+    return emissions_per_km.get(vehicle_type, {}).get(fuel_type, 0.121) * distance_km
 
 if __name__ == '__main__':
     app.run(debug=True)

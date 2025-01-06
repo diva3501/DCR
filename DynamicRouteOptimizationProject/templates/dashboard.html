@@ -13,7 +13,8 @@
     {% include 'navbar.html' %}
     <div class="container mt-4">
         <h2>Route and Emission Calculator</h2>
-        <p>Click on the map to select your start and end points or use autocomplete search.</p>
+        <p>Select your start and end points on the map or use autocomplete search. Choose your vehicle type and fuel type for accurate results.</p>
+
         <div id="map" style="height: 400px; border: 1px solid #ccc; margin-bottom: 20px;"></div>
 
         <form id="routeForm">
@@ -25,16 +26,29 @@
                     <option value="motorcycle">Motorcycle</option>
                 </select>
             </div>
+            <div class="mb-3">
+                <label for="fuel_type" class="form-label">Fuel Type</label>
+                <select class="form-control" id="fuel_type">
+                    <option value="petrol">Petrol</option>
+                    <option value="diesel">Diesel</option>
+                    <option value="electric">Electric</option>
+                </select>
+            </div>
             <input type="hidden" id="start">
             <input type="hidden" id="end">
             <button type="submit" class="btn btn-primary">Calculate</button>
         </form>
 
-        <div class="mt-4" id="results"></div>
+        <div class="mt-4" id="results">
+            <h3>Results:</h3>
+            <div id="routeDetails" class="alert alert-secondary" style="display: none;"></div>
+            <div id="error" class="alert alert-danger" style="display: none;"></div>
+        </div>
     </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <!-- Custom JS -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

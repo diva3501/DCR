@@ -1,53 +1,105 @@
-// Initialize Leaflet Map
-const map = L.map('map').setView([13.0827, 80.2707], 10); // Default location: Chennai
+// Initialize Leaflet Map with default view
+const map = L.map('map').setView([51.505, -0.09], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18,
+    maxZoom: 19
 }).addTo(map);
 
 let startMarker, endMarker;
+let startLatLng, endLatLng;
 
-// Click event to set start and end points
-map.on('click', function (e) {
-    if (!startMarker) {
-        startMarker = L.marker(e.latlng).addTo(map);
-        document.getElementById('start').value = `${e.latlng.lat},${e.latlng.lng}`;
-        alert("Start point selected!");
-    } else if (!endMarker) {
-        endMarker = L.marker(e.latlng).addTo(map);
-        document.getElementById('end').value = `${e.latlng.lat},${e.latlng.lng}`;
-        alert("End point selected!");
+// Geolocation to fetch user's current location
+function setMapToUserLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                map.setView([latitude, longitude], 13);
+                L.marker([latitude, longitude])
+                    .addTo(map)
+                    .bindPopup('You are here')
+                    .openPopup();
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                alert("Unable to fetch your location. Please allow location access in your browser.");
+            }
+        );
     } else {
-        alert("Both points are already selected. Reset the map to change.");
+        alert("Geolocation is not supported by your browser.");
+    }
+}
+
+// Call the function to set the map to the user's location
+setMapToUserLocation();
+
+// Add markers for start and end points on the map
+map.on('click', (e) => {
+    if (!startMarker) {
+        startLatLng = e.latlng;
+        startMarker = L.marker(e.latlng).addTo(map).bindPopup('Start Location').openPopup();
+    } else if (!endMarker) {
+        endLatLng = e.latlng;
+        endMarker = L.marker(e.latlng).addTo(map).bindPopup('End Location').openPopup();
+        document.getElementById('start').value = `${startLatLng.lat},${startLatLng.lng}`;
+        document.getElementById('end').value = `${endLatLng.lat},${endLatLng.lng}`;
     }
 });
 
-// Form submission logic
-document.getElementById('routeForm').addEventListener('submit', async function (e) {
+// Reset map markers for new selection
+const resetMarkers = () => {
+    if (startMarker) map.removeLayer(startMarker);
+    if (endMarker) map.removeLayer(endMarker);
+    startMarker = null;
+    endMarker = null;
+    startLatLng = null;
+    endLatLng = null;
+};
+
+// Handle form submission
+document.getElementById('routeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const start = document.getElementById('start').value;
     const end = document.getElementById('end').value;
     const vehicleType = document.getElementById('vehicle_type').value;
+    const fuelType = document.getElementById('fuel_type').value;
 
     if (!start || !end) {
-        alert("Please select both start and end points on the map.");
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').innerText = 'Please select both start and end locations.';
         return;
     }
 
-    const response = await fetch('/route', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ start, end, vehicle_type: vehicleType }),
-    });
+    try {
+        // Send request to backend
+        const response = await fetch('/route', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ start, end, vehicle_type: vehicleType, fuel_type: fuelType })
+        });
 
-    const data = await response.json();
-    const results = document.getElementById('results');
-    results.innerHTML = `
-        <h4>Route Summary</h4>
-        <p><strong>Distance:</strong> ${data.route_summary.lengthInMeters / 1000} km</p>
-        <p><strong>Emissions:</strong> ${data.emissions.toFixed(2)} kg</p>
-    `;
+        const data = await response.json();
+
+        if (response.ok) {
+            // Display route details
+            document.getElementById('routeDetails').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+
+            const { route_summary, emissions } = data;
+            document.getElementById('routeDetails').innerHTML = `
+                <p><strong>Distance:</strong> ${route_summary.distance_km.toFixed(2)} km</p>
+                <p><strong>Duration:</strong> ${route_summary.duration_min.toFixed(2)} minutes</p>
+                <p><strong>Weather (AQI):</strong> ${route_summary.weather}</p>
+                <p><strong>Estimated Emissions:</strong> ${emissions.toFixed(2)} kg CO₂</p>
+            `;
+        } else {
+            throw new Error(data.error || 'An unknown error occurred.');
+        }
+    } catch (err) {
+        // Display error message
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('routeDetails').style.display = 'none';
+        document.getElementById('error').innerText = err.message;
+    }
 });
