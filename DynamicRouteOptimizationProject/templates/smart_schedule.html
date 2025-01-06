@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Scheduling</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container mt-4">
+        <h2>Smart Scheduling</h2>
+        <p>Enter delivery details to calculate the optimal schedule based on traffic and priorities.</p>
+
+        <form id="smartScheduleForm">
+            <div class="mb-3">
+                <label for="num_orders" class="form-label">Number of Orders</label>
+                <input type="number" class="form-control" id="num_orders">
+            </div>
+
+            <div class="mb-3">
+                <label for="priority" class="form-label">Priority (1 for high priority)</label>
+                <input type="number" class="form-control" id="priority" max="5" min="1">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Calculate</button>
+        </form>
+
+        <div class="mt-4" id="scheduleResults">
+            <h3>Schedule Details:</h3>
+            <div id="scheduleDetails" class="alert alert-secondary" style="display: none;"></div>
+            <div id="error" class="alert alert-danger" style="display: none;"></div>
+        </div>
+    </div>
+</body>
+</html>

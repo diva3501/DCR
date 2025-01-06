@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 import requests
 
 app = Flask(__name__)
@@ -53,6 +53,10 @@ def get_route():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/smart_scheduling')
+def smart_scheduling():
+    return render_template('smart_scheduling.html')
 
 def estimate_emissions(distance_km, vehicle_type, fuel_type):
     emissions_per_km = {
