@@ -11,7 +11,7 @@ AQICN_API_KEY = "bfd17d0a7a3265bb140f9341cbd22581f0631a98"
 def index():
     return render_template('index.html')
 
-@app.route('/dashboard')
+@app.route('/routeCalculator')
 def dashboard():
     return render_template('dashboard.html')
 
