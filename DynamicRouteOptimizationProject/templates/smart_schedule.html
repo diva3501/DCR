@@ -3,35 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Scheduling</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Smart Scheduling App</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    {% include 'navbar.html' %}
-    <div class="container mt-4">
-        <h2>Smart Scheduling</h2>
-        <p>Enter delivery details to calculate the optimal schedule based on traffic and priorities.</p>
+    <!-- Content and Form: Map, Route Form, etc. -->
+    <div class="container">
+        <h1>Smart Scheduling</h1>
 
-        <form id="smartScheduleForm">
-            <div class="mb-3">
-                <label for="num_orders" class="form-label">Number of Orders</label>
-                <input type="number" class="form-control" id="num_orders">
-            </div>
+        <!-- Map -->
+        <div id="map" style="height: 500px;"></div>
 
-            <div class="mb-3">
-                <label for="priority" class="form-label">Priority (1 for high priority)</label>
-                <input type="number" class="form-control" id="priority" max="5" min="1">
-            </div>
-
-            <button type="submit" class="btn btn-primary">Calculate</button>
+        <form id="routeForm">
+            <label for="start">Start Location</label>
+            <input type="text" id="start" class="form-control" readonly>
+            <label for="end">End Location</label>
+            <input type="text" id="end" class="form-control" readonly>
+            <button class="btn btn-primary" id="calculateButton">Calculate Route</button>
+            <div id="error" class="text-danger" style="display:none;"></div>
         </form>
 
-        <div class="mt-4" id="scheduleResults">
-            <h3>Schedule Details:</h3>
-            <div id="scheduleDetails" class="alert alert-secondary" style="display: none;"></div>
-            <div id="error" class="alert alert-danger" style="display: none;"></div>
-        </div>
+        <div id="routeDetails" style="display:none; margin-top: 20px;"></div>
+
+        <!-- Smart Schedule Form -->
+        <form id="smartScheduleForm" class="mt-5">
+            <div class="form-group">
+                <label for="num_orders">Number of Orders</label>
+                <input type="number" id="num_orders" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="priority">Priority</label>
+                <input type="text" id="priority" class="form-control" required>
+            </div>
+            <button class="btn btn-primary" id="calculateButton">Calculate Schedule</button>
+            <div id="scheduleDetails" style="display:none; margin-top: 20px;"></div>
+        </form>
     </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Initialize Leaflet Map with default view
+        const map = L.map('map').setView([51.505, -0.09], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        let startMarker, endMarker;
+        let startLatLng, endLatLng;
+
+        // Geolocation to fetch user's current location
+        function setMapToUserLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        map.setView([latitude, longitude], 13);
+                        L.marker([latitude, longitude])
+                            .addTo(map)
+                            .bindPopup('You are here')
+                            .openPopup();
+                    },
+                    (error) => {
+                        console.error("Geolocation error:", error);
+                        alert("Unable to fetch your location. Please allow location access in your browser.");
+                    }
+                );
+            } else {
+                alert("Geolocation is not supported by your browser.");
+            }
+        }
+
+        // Call the function to set the map to the user's location
+        setMapToUserLocation();
+
+        // Add markers for start and end points on the map
+        map.on('click', (e) => {
+            if (!startMarker) {
+                startLatLng = e.latlng;
+                startMarker = L.marker(e.latlng).addTo(map).bindPopup('Start Location').openPopup();
+            } else if (!endMarker) {
+                endLatLng = e.latlng;
+                endMarker = L.marker(e.latlng).addTo(map).bindPopup('End Location').openPopup();
+                document.getElementById('start').value = `${startLatLng.lat},${startLatLng.lng}`;
+                document.getElementById('end').value = `${endLatLng.lat},${endLatLng.lng}`;
+            }
+        });
+
+        // Reset map markers for new selection
+        const resetMarkers = () => {
+            if (startMarker) map.removeLayer(startMarker);
+            if (endMarker) map.removeLayer(endMarker);
+            startMarker = null;
+            endMarker = null;
+            startLatLng = null;
+            endLatLng = null;
+        };
+
+        // Route Form submission
+        document.getElementById('routeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const start = document.getElementById('start').value;
+            const end = document.getElementById('end').value;
+
+            if (!start || !end) {
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').innerText = 'Please select both start and end locations.';
+                return;
+            }
+
+            try {
+                const response = await fetch('/route', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ start, end })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('routeDetails').style.display = 'block';
+                    document.getElementById('error').style.display = 'none';
+                    const { route_summary, emissions } = data;
+                    document.getElementById('routeDetails').innerHTML = `
+                        <p><strong>Distance:</strong> ${route_summary.distance_km.toFixed(2)} km</p>
+                        <p><strong>Duration:</strong> ${route_summary.duration_min.toFixed(2)} minutes</p>
+                        <p><strong>Weather (AQI):</strong> ${route_summary.weather}</p>
+                        <p><strong>Estimated Emissions:</strong> ${emissions.toFixed(2)} kg CO₂</p>
+                    `;
+                } else {
+                    throw new Error(data.error || 'An unknown error occurred.');
+                }
+            } catch (err) {
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('routeDetails').style.display = 'none';
+                document.getElementById('error').innerText = err.message;
+            }
+        });
+
+        // Smart Schedule form submission
+        document.getElementById('smartScheduleForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Prevent form submission and page refresh
+
+            const numOrders = parseInt(document.getElementById('num_orders').value, 10);
+            const priority = document.getElementById('priority').value.trim();
+
+            if (!numOrders || !priority) {
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').innerText = 'Please fill in all fields correctly.';
+                return;
+            }
+
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('scheduleDetails').style.display = 'none';
+
+            try {
+                const response = await fetch('/smart_schedule', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ num_orders: numOrders, priority: priority })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('scheduleDetails').style.display = 'block';
+                    document.getElementById('scheduleDetails').innerHTML = `
+                        <p><strong>Optimal Time to Dispatch:</strong> ${data.best_time}</p>
+                        <p><strong>Suggested Priority Levels:</strong> ${data.priority_suggestion}</p>
+                    `;
+                } else {
+                    throw new Error(data.error || 'An unknown error occurred.');
+                }
+            } catch (err) {
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').innerText = err.message || 'Network error';
+            }
+        });
+
+    </script>
+
 </body>
 </html>

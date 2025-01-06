@@ -56,7 +56,7 @@ const resetMarkers = () => {
     endLatLng = null;
 };
 
-// Handle form submission
+// Route form submission
 document.getElementById('routeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -72,7 +72,6 @@ document.getElementById('routeForm').addEventListener('submit', async (e) => {
     }
 
     try {
-        // Send request to backend
         const response = await fetch('/route', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -82,7 +81,6 @@ document.getElementById('routeForm').addEventListener('submit', async (e) => {
         const data = await response.json();
 
         if (response.ok) {
-            // Display route details
             document.getElementById('routeDetails').style.display = 'block';
             document.getElementById('error').style.display = 'none';
 
@@ -97,89 +95,98 @@ document.getElementById('routeForm').addEventListener('submit', async (e) => {
             throw new Error(data.error || 'An unknown error occurred.');
         }
     } catch (err) {
-        // Display error message
         document.getElementById('error').style.display = 'block';
         document.getElementById('routeDetails').style.display = 'none';
         document.getElementById('error').innerText = err.message;
     }
 });
-// Handle Package Load Calculation
-document.getElementById('packageLoadForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
 
-    const vehicleCapacity = document.getElementById('vehicle_capacity').value;
-    const packageWeight = document.getElementById('package_weight').value;
-    const numPackages = document.getElementById('num_packages').value;
+// Package load form submission
+const packageLoadForm = document.getElementById('packageLoadForm');
+if (packageLoadForm) {
+    packageLoadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-    if (!vehicleCapacity || !packageWeight || !numPackages) {
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('error').innerText = 'Please fill in all fields.';
-        return;
-    }
+        const vehicleCapacity = parseFloat(document.getElementById('vehicle_capacity').value);
+        const packageWeight = parseFloat(document.getElementById('package_weight').value);
+        const numPackages = parseInt(document.getElementById('num_packages').value, 10);
 
-    try {
-        const response = await fetch('/package_load', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ vehicle_capacity: vehicleCapacity, package_weight: packageWeight, num_packages: numPackages })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            // Display load details
-            document.getElementById('loadDetails').style.display = 'block';
-            document.getElementById('error').style.display = 'none';
-            document.getElementById('loadDetails').innerHTML = `
-                <p><strong>Suggested Loads:</strong> ${data.suggested_loads}</p>
-                <p><strong>Remaining Capacity:</strong> ${data.remaining_capacity}</p>
-            `;
-        } else {
-            throw new Error(data.error || 'An unknown error occurred.');
+        if (!vehicleCapacity || !packageWeight || !numPackages) {
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').innerText = 'Please fill in all fields correctly.';
+            return;
         }
-    } catch (err) {
-        document.getElementById('error').style.display = 'block';
+
+        document.getElementById('error').style.display = 'none';
         document.getElementById('loadDetails').style.display = 'none';
-        document.getElementById('error').innerText = err.message;
-    }
-});
 
-// Handle Smart Scheduling Calculation
-document.getElementById('smartScheduleForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+        try {
+            const response = await fetch('/package_load', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vehicle_capacity: vehicleCapacity, package_weight: packageWeight, num_packages: numPackages })
+            });
 
-    const numOrders = document.getElementById('num_orders').value;
-    const priority = document.getElementById('priority').value;
+            const data = await response.json();
 
-    if (!numOrders || !priority) {
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('error').innerText = 'Please fill in all fields.';
-        return;
-    }
-
-    try {
-        const response = await fetch('/smart_schedule', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ num_orders: numOrders, priority: priority })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            document.getElementById('scheduleDetails').style.display = 'block';
-            document.getElementById('error').style.display = 'none';
-            document.getElementById('scheduleDetails').innerHTML = `
-                <p><strong>Optimal Time to Dispatch:</strong> ${data.best_time}</p>
-                <p><strong>Suggested Priority Levels:</strong> ${data.priority_suggestion}</p>
-            `;
-        } else {
-            throw new Error(data.error || 'An unknown error occurred.');
+            if (response.ok) {
+                document.getElementById('loadDetails').style.display = 'block';
+                document.getElementById('loadDetails').innerHTML = `
+                    <p><strong>Suggested Loads:</strong> ${data.suggested_loads}</p>
+                    <p><strong>Remaining Capacity:</strong> ${data.remaining_capacity}</p>
+                `;
+            } else {
+                throw new Error(data.error || 'An unknown error occurred.');
+            }
+        } catch (err) {
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').innerText = err.message || 'Network error';
         }
-    } catch (err) {
-        document.getElementById('error').style.display = 'block';
+    });
+}
+
+// Smart schedule form submission
+const smartScheduleForm = document.getElementById('smartScheduleForm');
+const calculateButton = document.getElementById('calculateButton');
+
+if (smartScheduleForm && calculateButton) {
+    calculateButton.addEventListener('click', async (e) => {
+        e.preventDefault();
+
+        const numOrders = parseInt(document.getElementById('num_orders').value, 10);
+        const priority = document.getElementById('priority').value.trim();
+
+        if (!numOrders || !priority) {
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').innerText = 'Please fill in all fields correctly.';
+            return;
+        }
+
+        document.getElementById('error').style.display = 'none';
         document.getElementById('scheduleDetails').style.display = 'none';
-        document.getElementById('error').innerText = err.message;
-    }
-});
+
+        try {
+            const response = await fetch('/smart_schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ num_orders: numOrders, priority: priority })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('scheduleDetails').style.display = 'block';
+                document.getElementById('scheduleDetails').innerHTML = `
+                    <p><strong>Optimal Time to Dispatch:</strong> ${data.best_time}</p>
+                    <p><strong>Suggested Priority Levels:</strong> ${data.priority_suggestion}</p>
+                `;
+            } else {
+                throw new Error(data.error || 'An unknown error occurred.');
+            }
+        } catch (err) {
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').innerText = err.message || 'Network error';
+        }
+    });
+}
 

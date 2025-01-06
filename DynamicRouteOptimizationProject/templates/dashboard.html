@@ -51,5 +51,110 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <script>
+        var map = L.map('map').setView([51.505, -0.09], 13);  // Initial map view (adjust to your default view)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        var startMarker, endMarker, routeLines = [];
+        
+        // Map Click event for selecting start and end locations
+        map.on('click', function(e) {
+            if (!startMarker) {
+                startMarker = L.marker(e.latlng).addTo(map);
+                document.getElementById('start').value = e.latlng.lat + "," + e.latlng.lng;
+            } else if (!endMarker) {
+                endMarker = L.marker(e.latlng).addTo(map);
+                document.getElementById('end').value = e.latlng.lat + "," + e.latlng.lng;
+            } else {
+                map.removeLayer(startMarker);
+                map.removeLayer(endMarker);
+                startMarker = null;
+                endMarker = null;
+                routeLines.forEach(function(line) { map.removeLayer(line); });
+                routeLines = [];
+                document.getElementById('start').value = '';
+                document.getElementById('end').value = '';
+            }
+        });
+
+        document.getElementById("routeForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            // Clear previous results
+            document.getElementById("routeDetails").style.display = "none";
+            document.getElementById("error").style.display = "none";
+
+            var start = document.getElementById("start").value;
+            var end = document.getElementById("end").value;
+            var vehicleType = document.getElementById("vehicle_type").value;
+            var fuelType = document.getElementById("fuel_type").value;
+
+            // Ensure both start and end locations are selected
+            if (!start || !end) {
+                document.getElementById("error").style.display = "block";
+                document.getElementById("error").innerText = "Please select both start and end locations on the map.";
+                return;
+            }
+
+            fetch("/route", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    start: start,
+                    end: end,
+                    vehicle_type: vehicleType,
+                    fuel_type: fuelType
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById("error").style.display = "block";
+                    document.getElementById("error").innerText = data.error;
+                } else {
+                    // Clear previous routes from the map
+                    routeLines.forEach(function(line) { map.removeLayer(line); });
+                    routeLines = [];
+
+                    // Display each route on the map
+                    data.routes.forEach(function(route, index) {
+                        var latlngs = route.geometry.coordinates.map(function(coord) {
+                            return [coord[1], coord[0]]; // Convert [lng, lat] to [lat, lng]
+                        });
+                        var polyline = L.polyline(latlngs, { color: 'blue' }).addTo(map);
+                        routeLines.push(polyline);
+                    });
+
+                    // Select the best route based on duration and highlight it
+                    var bestRoute = data.best_route;
+                    var bestRouteLatLngs = bestRoute.geometry.coordinates.map(function(coord) {
+                        return [coord[1], coord[0]]; 
+                    });
+
+                    var bestRoutePolyline = L.polyline(bestRouteLatLngs, { color: 'green', weight: 5 }).addTo(map);
+
+                    // Show route details (distance, duration, emissions, etc.)
+                    document.getElementById("routeDetails").style.display = "block";
+                    document.getElementById("routeDetails").innerHTML = `
+                        <strong>Best Route:</strong><br>
+                        Distance: ${bestRoute.distance_km} km<br>
+                        Duration: ${bestRoute.duration_min} minutes<br>
+                        Traffic Time: ${bestRoute.traffic_level} seconds<br>
+                        Estimated Emissions: ${data.emissions.toFixed(2)} kg CO2<br>
+                        Weather: ${data.weather}<br>
+                    `;
+                }
+            })
+            .catch(error => {
+                document.getElementById("error").style.display = "block";
+                document.getElementById("error").innerText = "Error fetching data.";
+            });
+        });
+    </script>
 </body>
 </html>

@@ -24,39 +24,103 @@ def get_route():
     fuel_type = data.get('fuel_type', 'petrol')
 
     try:
-        # Fetch route from TomTom API
+        # Fetch route from TomTom API with traffic consideration
         tomtom_url = f"https://api.tomtom.com/routing/1/calculateRoute/{start}:{end}/json?key={TOMTOM_API_KEY}&traffic=true"
         tomtom_response = requests.get(tomtom_url)
         tomtom_data = tomtom_response.json()
 
-        # Extract distance and duration
-        distance_km = tomtom_data['routes'][0]['summary']['lengthInMeters'] / 1000
-        duration_min = tomtom_data['routes'][0]['summary']['travelTimeInSeconds'] / 60
+        # Extract route summaries
+        routes = tomtom_data.get("routes", [])
+        route_details = []
 
-        # Estimate emissions
-        emissions_kg = estimate_emissions(distance_km, vehicle_type, fuel_type)
+        for route in routes:
+            distance_km = route['summary']['lengthInMeters'] / 1000
+            duration_min = route['summary']['travelTimeInSeconds'] / 60
+            route_details.append({
+                "distance_km": distance_km,
+                "duration_min": duration_min,
+                "traffic_level": route['summary'].get('trafficTimeInSeconds', 'N/A')
+            })
 
-        # Fetch weather data from AQICN
+        # Choose the best route based on the shortest duration (or traffic conditions)
+        best_route = min(route_details, key=lambda x: x["duration_min"])
+
+        # Estimate emissions for the best route
+        emissions_kg = estimate_emissions(best_route["distance_km"], vehicle_type, fuel_type)
+
+        # Fetch weather data from AQICN API
         lat, lon = start.split(',')
         weather_url = f"https://api.waqi.info/feed/geo:{lat};{lon}/?token={AQICN_API_KEY}"
         weather_response = requests.get(weather_url)
         weather_data = weather_response.json()
         weather = weather_data.get('data', {}).get('aqi', 'Unavailable')
 
+        # Respond with multiple routes details and the best one selected
         return jsonify({
-            "route_summary": {
-                "distance_km": distance_km,
-                "duration_min": duration_min,
-                "weather": weather,
-            },
-            "emissions": emissions_kg
+            "routes": route_details,
+            "best_route": best_route,
+            "emissions": emissions_kg,
+            "weather": weather
         })
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/smart_scheduling')
 def smart_scheduling():
     return render_template('smart_schedule.html')
+
+@app.route('/smart_schedule', methods=['POST'])
+def smart_schedule():
+    try:
+        data = request.json
+        num_orders = data.get('num_orders')
+        priority = data.get('priority')
+
+        # Implement your logic here
+        # For example, use the inputs to calculate a result:
+        if num_orders < 1:
+            raise ValueError("Number of orders should be greater than zero.")
+
+        best_time = "10:30 AM"  # Placeholder logic
+        priority_suggestion = "High"  # Placeholder logic
+        
+        # Respond with JSON data
+        return jsonify({
+            'best_time': best_time,
+            'priority_suggestion': priority_suggestion
+        })
+    except Exception as e:
+        # In case of errors, send an error response with 500 status code
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/package_load')
+def package_loading():
+    return render_template('package_load.html')
+
+@app.route('/package_load', methods=['POST'])
+def package_load():
+    data = request.json
+    vehicle_capacity = data.get('vehicle_capacity')
+    package_weight = data.get('package_weight')
+    num_packages = data.get('num_packages')
+
+    if not vehicle_capacity or not package_weight or not num_packages:
+        return jsonify({"error": "All fields are required"}), 400
+
+    # Calculate the number of vehicles needed to carry all packages
+    packages_per_vehicle = vehicle_capacity // package_weight
+    required_vehicles = (num_packages + packages_per_vehicle - 1) // packages_per_vehicle
+
+    if required_vehicles <= 0:
+        return jsonify({"error": "Package weight exceeds vehicle capacity."}), 400
+
+    return jsonify({
+        "required_vehicles": required_vehicles,
+        "packages_per_vehicle": packages_per_vehicle
+    })
+
 
 def estimate_emissions(distance_km, vehicle_type, fuel_type):
     emissions_per_km = {
