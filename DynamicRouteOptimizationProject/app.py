@@ -56,7 +56,7 @@ def get_route():
 
 @app.route('/smart_scheduling')
 def smart_scheduling():
-    return render_template('smart_scheduling.html')
+    return render_template('smart_schedule.html')
 
 def estimate_emissions(distance_km, vehicle_type, fuel_type):
     emissions_per_km = {
