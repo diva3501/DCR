@@ -4,9 +4,9 @@
 
 ## Project Overview
 
-**Dynamic Route Optimization and Emission Reduction** is a Python-based platform designed to optimize vehicle routes for Realtime Uses in Day to Day and Leveraging Business Field for logistics and transportation companies by advanced real-time traffic, weather, and vehicle-specific data. The system integrates APIs such as TomTom, Google Maps, AQICN, and OSRM to calculate efficient routes, estimate CO₂ emissions, and promote environmental sustainability. The platform adapts to changing conditions, prioritizing timely deliveries while ensuring a user-friendly and eco-conscious experience.
+**Dynamic Route Optimization and Emission Reduction** is a Python-based platform designed to optimize vehicle routes for Realtime Uses in Day to Day and Leveraging Business Field for logistics and transportation companies by advanced real-time traffic, weather, and vehicle-specific data. The system integrates APIs such as TomTom, Google Maps, AQICN, and OSRM to calculate efficient routes, estimate CO₂ emissions, and promote environmental sustainability.
 
-This solution is aimed at reducing carbon footprints by providing environmentally friendly travel alternatives without compromising on speed and efficiency.
+The platform adapts to changing conditions, prioritizing timely deliveries while ensuring a user-friendly and eco-conscious experience. The solution is designed to reduce carbon footprints by providing environmentally friendly travel alternatives without compromising on speed and efficiency. The system also includes a model and pipeline for optimized route recommendations, along with an interactive UI/UX to enhance user experience.
 
 ---
 
@@ -31,6 +31,10 @@ This solution is aimed at reducing carbon footprints by providing environmentall
 - **Notifications & Alerts**: Sends notifications and alerts to users about changes in traffic, weather, or routes.
 
 - **User Customization**: Allows users to customize preferences such as vehicle type, route types (fastest, shortest, eco-friendly), and more.
+  
+- **Model and Pipeline for Optimization**: Integrated model and pipeline for continuous optimization of routes and emissions, adapting to real-time data.
+
+
 
 ---
 
