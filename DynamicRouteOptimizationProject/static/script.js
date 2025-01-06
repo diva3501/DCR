@@ -1,4 +1,3 @@
-// Initialize Leaflet Map with default view
 const map = L.map('map').setView([51.505, -0.09], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -8,7 +7,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let startMarker, endMarker;
 let startLatLng, endLatLng;
 
-// Geolocation to fetch user's current location
 function setMapToUserLocation() {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -30,10 +28,8 @@ function setMapToUserLocation() {
     }
 }
 
-// Call the function to set the map to the user's location
 setMapToUserLocation();
 
-// Add markers for start and end points on the map
 map.on('click', (e) => {
     if (!startMarker) {
         startLatLng = e.latlng;
@@ -46,7 +42,6 @@ map.on('click', (e) => {
     }
 });
 
-// Reset map markers for new selection
 const resetMarkers = () => {
     if (startMarker) map.removeLayer(startMarker);
     if (endMarker) map.removeLayer(endMarker);
@@ -56,7 +51,6 @@ const resetMarkers = () => {
     endLatLng = null;
 };
 
-// Route form submission
 document.getElementById('routeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -101,7 +95,6 @@ document.getElementById('routeForm').addEventListener('submit', async (e) => {
     }
 });
 
-// Package load form submission
 const packageLoadForm = document.getElementById('packageLoadForm');
 if (packageLoadForm) {
     packageLoadForm.addEventListener('submit', async (e) => {
@@ -145,7 +138,6 @@ if (packageLoadForm) {
     });
 }
 
-// Smart schedule form submission
 const smartScheduleForm = document.getElementById('smartScheduleForm');
 const calculateButton = document.getElementById('calculateButton');
 

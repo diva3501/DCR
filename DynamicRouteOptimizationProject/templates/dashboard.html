@@ -117,20 +117,17 @@
                     document.getElementById("error").style.display = "block";
                     document.getElementById("error").innerText = data.error;
                 } else {
-                    // Clear previous routes from the map
                     routeLines.forEach(function(line) { map.removeLayer(line); });
                     routeLines = [];
 
-                    // Display each route on the map
                     data.routes.forEach(function(route, index) {
                         var latlngs = route.geometry.coordinates.map(function(coord) {
-                            return [coord[1], coord[0]]; // Convert [lng, lat] to [lat, lng]
+                            return [coord[1], coord[0]]; 
                         });
                         var polyline = L.polyline(latlngs, { color: 'blue' }).addTo(map);
                         routeLines.push(polyline);
                     });
 
-                    // Select the best route based on duration and highlight it
                     var bestRoute = data.best_route;
                     var bestRouteLatLngs = bestRoute.geometry.coordinates.map(function(coord) {
                         return [coord[1], coord[0]]; 
@@ -138,7 +135,6 @@
 
                     var bestRoutePolyline = L.polyline(bestRouteLatLngs, { color: 'green', weight: 5 }).addTo(map);
 
-                    // Show route details (distance, duration, emissions, etc.)
                     document.getElementById("routeDetails").style.display = "block";
                     document.getElementById("routeDetails").innerHTML = `
                         <strong>Best Route:</strong><br>

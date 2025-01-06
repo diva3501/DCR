@@ -1,50 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Scheduling App</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <!-- Content and Form: Map, Route Form, etc. -->
-    <div class="container">
-        <h1>Smart Scheduling</h1>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        /* Custom Styling */
+        body {
+            padding-top: 20px;
+            font-family: Arial, sans-serif;
+        }
 
-        <!-- Map -->
-        <div id="map" style="height: 500px;"></div>
+        .container {
+            max-width: 1200px;
+        }
+
+        #map {
+            height: 450px;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+        }
+
+        .form-group label {
+            font-weight: bold;
+        }
+
+        #error {
+            margin-top: 10px;
+            display: none;
+        }
+
+        #scheduleDetails, #routeDetails {
+            margin-top: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            padding: 10px 0;
+            background-color: #343a40;
+            color: #fff;
+            text-align: center;
+        }
+
+        .btn-custom {
+            background-color: #0069d9;
+            color: #fff;
+            border-radius: 50px;
+        }
+
+        .btn-custom:hover {
+            background-color: #0056b3;
+        }
+
+        @media (max-width: 576px) {
+            #map {
+                height: 350px;
+            }
+
+            .container {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'navbar.html' %}
+    
+    <!-- Main Content -->
+    <div class="container">
+        <h1 class="text-center">Smart Scheduling App</h1>
+
+
+        <div id="map"></div>
 
         <form id="routeForm">
-            <label for="start">Start Location</label>
-            <input type="text" id="start" class="form-control" readonly>
-            <label for="end">End Location</label>
-            <input type="text" id="end" class="form-control" readonly>
-            <button class="btn btn-primary" id="calculateButton">Calculate Route</button>
-            <div id="error" class="text-danger" style="display:none;"></div>
+            <div class="form-group">
+                <label for="start">Start Location</label>
+                <input type="text" id="start" class="form-control" readonly placeholder="Click on the map to select the start location">
+            </div>
+            <div class="form-group">
+                <label for="end">End Location</label>
+                <input type="text" id="end" class="form-control" readonly placeholder="Click on the map to select the end location">
+            </div>
+            <div id="error" class="alert alert-danger"></div>
         </form>
 
-        <div id="routeDetails" style="display:none; margin-top: 20px;"></div>
+        <div id="routeDetails" style="display:none;"></div>
 
         <!-- Smart Schedule Form -->
-        <form id="smartScheduleForm" class="mt-5">
+        <h3 class="my-4">Smart Scheduling</h3>
+        <form id="smartScheduleForm">
             <div class="form-group">
                 <label for="num_orders">Number of Orders</label>
-                <input type="number" id="num_orders" class="form-control" required>
+                <input type="number" id="num_orders" class="form-control" required placeholder="Enter the number of orders">
             </div>
             <div class="form-group">
                 <label for="priority">Priority</label>
-                <input type="text" id="priority" class="form-control" required>
+                <input type="text" id="priority" class="form-control" required placeholder="Enter priority">
             </div>
-            <button class="btn btn-primary" id="calculateButton">Calculate Schedule</button>
-            <div id="scheduleDetails" style="display:none; margin-top: 20px;"></div>
+            <button type="submit" class="btn btn-custom">Calculate Schedule</button>
         </form>
+        
+        <div id="scheduleDetails" style="display:none;"></div>
     </div>
+
+
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        // Initialize Leaflet Map with default view
         const map = L.map('map').setView([51.505, -0.09], 13);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -54,7 +128,7 @@
         let startMarker, endMarker;
         let startLatLng, endLatLng;
 
-        // Geolocation to fetch user's current location
+
         function setMapToUserLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -76,10 +150,8 @@
             }
         }
 
-        // Call the function to set the map to the user's location
-        setMapToUserLocation();
+        setMapToUserLocation(); 
 
-        // Add markers for start and end points on the map
         map.on('click', (e) => {
             if (!startMarker) {
                 startLatLng = e.latlng;
@@ -92,62 +164,10 @@
             }
         });
 
-        // Reset map markers for new selection
-        const resetMarkers = () => {
-            if (startMarker) map.removeLayer(startMarker);
-            if (endMarker) map.removeLayer(endMarker);
-            startMarker = null;
-            endMarker = null;
-            startLatLng = null;
-            endLatLng = null;
-        };
 
-        // Route Form submission
-        document.getElementById('routeForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const start = document.getElementById('start').value;
-            const end = document.getElementById('end').value;
-
-            if (!start || !end) {
-                document.getElementById('error').style.display = 'block';
-                document.getElementById('error').innerText = 'Please select both start and end locations.';
-                return;
-            }
-
-            try {
-                const response = await fetch('/route', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ start, end })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    document.getElementById('routeDetails').style.display = 'block';
-                    document.getElementById('error').style.display = 'none';
-                    const { route_summary, emissions } = data;
-                    document.getElementById('routeDetails').innerHTML = `
-                        <p><strong>Distance:</strong> ${route_summary.distance_km.toFixed(2)} km</p>
-                        <p><strong>Duration:</strong> ${route_summary.duration_min.toFixed(2)} minutes</p>
-                        <p><strong>Weather (AQI):</strong> ${route_summary.weather}</p>
-                        <p><strong>Estimated Emissions:</strong> ${emissions.toFixed(2)} kg CO₂</p>
-                    `;
-                } else {
-                    throw new Error(data.error || 'An unknown error occurred.');
-                }
-            } catch (err) {
-                document.getElementById('error').style.display = 'block';
-                document.getElementById('routeDetails').style.display = 'none';
-                document.getElementById('error').innerText = err.message;
-            }
-        });
-
-        // Smart Schedule form submission
+        // Handle Smart Schedule form submission
         document.getElementById('smartScheduleForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Prevent form submission and page refresh
-
+            e.preventDefault();
             const numOrders = parseInt(document.getElementById('num_orders').value, 10);
             const priority = document.getElementById('priority').value.trim();
 
@@ -158,7 +178,6 @@
             }
 
             document.getElementById('error').style.display = 'none';
-            document.getElementById('scheduleDetails').style.display = 'none';
 
             try {
                 const response = await fetch('/smart_schedule', {
@@ -168,7 +187,6 @@
                 });
 
                 const data = await response.json();
-
                 if (response.ok) {
                     document.getElementById('scheduleDetails').style.display = 'block';
                     document.getElementById('scheduleDetails').innerHTML = `
@@ -183,8 +201,7 @@
                 document.getElementById('error').innerText = err.message || 'Network error';
             }
         });
-
     </script>
-
 </body>
+
 </html>
