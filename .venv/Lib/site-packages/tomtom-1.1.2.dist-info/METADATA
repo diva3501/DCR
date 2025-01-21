@@ -1,0 +1,34 @@
+Metadata-Version: 2.1
+Name: tomtom
+Version: 1.1.2
+Summary: Funções para tese de doutorado. Em breve mais.
+Home-page: https://github.com/carloselcastro/tomtom.git
+Author: Carlos Eduardo Leal de Castro
+Author-email: lealdecastro@gmail.com
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: matplotlib
+Requires-Dist: pandas
+Requires-Dist: scikit-learn
+Requires-Dist: statsmodels
+Requires-Dist: librosa
+Requires-Dist: soundfile
+Requires-Dist: IPython
+Requires-Dist: plotly
+Requires-Dist: seaborn
+Requires-Dist: notebook
+Requires-Dist: jupyter
+
+# ToMtOm - Python project for drum sound applications
+
+This project is part of a PhD thesis by Dr. Carlos de Castro.
+
+Soon :)
