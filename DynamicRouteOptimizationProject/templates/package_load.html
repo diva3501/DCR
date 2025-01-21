@@ -50,14 +50,12 @@
             const packageWeight = $('#package_weight').val();
             const numPackages = $('#num_packages').val();
 
-            // Validation
             if (!vehicleCapacity || !packageWeight || !numPackages) {
                 $('#error').text('All fields are required').show();
                 return;
             }
             $('#error').hide();
-            
-            // Send POST request for package load optimization
+
             $.ajax({
                 type: 'POST',
                 url: '/package_load',
