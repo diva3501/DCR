@@ -4,83 +4,240 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Scheduling</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">  
+  <script
+  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initMap"
+  async defer>
+</script>
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    .order-item {
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
   <div class="container mt-5">
     <h2>Smart Scheduling</h2>
+  
     <div class="form-group">
       <label for="num_orders">Number of Orders</label>
-      <input type="number" id="num_orders" class="form-control">
-      <label for="priority" class="mt-3">Priority</label>
-      <select id="priority" class="form-control">
+      <input type="number" id="num_orders" class="form-control mb-3" min="1" value="1">
+      
+      <label for="priority">Priority</label>
+      <select id="priority" class="form-control mb-3">
         <option value="high">High</option>
         <option value="medium" selected>Medium</option>
         <option value="low">Low</option>
       </select>
-      <div id="order_coords_container" class="mt-3"></div>
+
+      <div id="orders-container">
+        <h5>Orders</h5>
+        <div id="order-0" class="order-item">
+          <label>Start Location:</label>
+          <input type="text" class="form-control mb-2 start-coords" placeholder="Search and pin start location">
+          <label>End Location:</label>
+          <input type="text" class="form-control mb-2 end-coords" placeholder="Search and pin end location">
+        </div>
+      </div>
       <button class="btn btn-primary mt-4" id="scheduleButton">Schedule</button>
     </div>
-    <div id="result"></div>
+    <div id="result" class="mt-4"></div>
+    <div id="map"></div>
   </div>
-  <script>
-    function addOrderFields() {
-      const numOrders = document.getElementById('num_orders').value || 0;
-      const container = document.getElementById('order_coords_container');
-      container.innerHTML = '';
-      for (let i = 0; i < numOrders; i++) {
-        container.innerHTML += `
-          <div class="mt-2">
-            <h5>Order ${i + 1}</h5>
-            <label>Start Coordinates</label>
-            <input type="text" class="form-control mb-2" id="start_coords_${i}">
-            <label>End Coordinates</label>
-            <input type="text" class="form-control">
-          </div>`;
+
+  <script>let map, startMarkers = [], endMarkers = [];
+    let orders = [];
+    
+    function initMap() {
+      console.log("Initializing map...");
+    
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const userLocation = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            };
+    
+            console.log("User's current location:", userLocation);
+    
+            map = new google.maps.Map(document.getElementById("map"), {
+              center: userLocation,
+              zoom: 13,
+            });
+    
+            new google.maps.Marker({
+              position: userLocation,
+              map,
+              title: "Your Location",
+            });
+    
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({ map });
+    
+          },
+          (error) => {
+            console.error("Error fetching location:", error.message);
+            alert("Unable to fetch your current location. Defaulting to Bangalore.");
+            fallbackToDefaultLocation();
+          }
+        );
+      } else {
+        console.error("Geolocation is not supported by this browser.");
+        alert("Geolocation is not supported by your browser. Defaulting to Bangalore.");
+        fallbackToDefaultLocation();
       }
     }
-
-    document.getElementById('num_orders').addEventListener('input', addOrderFields);
-
-    document.getElementById('scheduleButton').addEventListener('click', function() {
+    
+    function addAutocompleteToInput(input, type, index) {
+      const autocomplete = new google.maps.places.Autocomplete(input);
+      autocomplete.bindTo("bounds", map);
+    
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry || !place.geometry.location) {
+          alert("No details available for this location.");
+          return;
+        }
+    
+        const latLng = place.geometry.location;
+    
+        if (type === 'start') {
+          clearMarkers(startMarkers);
+          if (!startMarkers[index]) {
+            startMarkers[index] = new google.maps.Marker({
+              position: latLng,
+              map: map,
+              label: `S${index + 1}`,
+            });
+          } else {
+            startMarkers[index].setPosition(latLng);
+          }
+        } else if (type === 'end') {
+          clearMarkers(endMarkers);
+          if (!endMarkers[index]) {
+            endMarkers[index] = new google.maps.Marker({
+              position: latLng,
+              map: map,
+              label: `E${index + 1}`,
+            });
+          } else {
+            endMarkers[index].setPosition(latLng);
+          }
+        }
+    
+        map.setCenter(latLng);
+        map.setZoom(12);
+        if (startMarkers.length === endMarkers.length) {
+          getRoutes();
+        }
+      });
+    }
+    
+    function clearMarkers(markersArray) {
+      markersArray.forEach(marker => marker.setMap(null));
+      markersArray = [];
+    }
+    
+    function getRoutes() {
+      const routes = [];
+    
+      for (let i = 0; i < startMarkers.length; i++) {
+        const start = startMarkers[i].getPosition().toUrlValue();
+        const end = endMarkers[i].getPosition().toUrlValue();
+    
+        routes.push({ start, end });
+      }
+    
+      fetch('/get-routes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ routes }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        displayRoutes(data.routes);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    }
+    
+    function displayRoutes(routes) {
+      const routeInfo = document.getElementById('result');
+      routeInfo.innerHTML = '';
+    
+      if (window.routeRenderers) {
+        window.routeRenderers.forEach(renderer => renderer.setMap(null));
+      }
+      window.routeRenderers = [];
+    
+      routes.forEach((route, index) => {
+        const polyline = new google.maps.Polyline({
+          path: google.maps.geometry.encoding.decodePath(route.polyline),
+          geodesic: true,
+          strokeColor: index === 0 ? 'green' : index === 1 ? 'yellow' : 'red',
+          strokeOpacity: 0.6,
+          strokeWeight: 5
+        });
+    
+        polyline.setMap(map);
+        window.routeRenderers.push(polyline);
+    
+        routeInfo.innerHTML += `
+          <div class="card mt-3">
+            <div class="card-body">
+              <h5 class="card-title" style="color:${polyline.strokeColor};">Route ${index + 1}</h5>
+              <p class="card-text" style="color:${polyline.strokeColor};">Distance: ${route.distance}</p>
+              <p class="card-text" style="color:${polyline.strokeColor};">Duration: ${route.duration}</p>
+              <p class="card-text" style="color:${polyline.strokeColor};">CO2 Emissions: ${route.emissions}</p>
+            </div>
+          </div>
+        `;
+      });
+    }
+    
+    document.getElementById('scheduleButton').addEventListener('click', () => {
       const numOrders = document.getElementById('num_orders').value;
       const priority = document.getElementById('priority').value;
-
-      let orderCoords = [];
+    
+      orders = [];
       for (let i = 0; i < numOrders; i++) {
-        const startCoords = document.getElementById(`start_coords_${i}`).value;
-        const endCoords = document.getElementById(`end_coords_${i}`).value;
-        orderCoords.push({
-          start_coords: startCoords,
-          end_coords: endCoords
-        });
+        const startInput = document.querySelector(`#order-${i} .start-coords`).value;
+        const endInput = document.querySelector(`#order-${i} .end-coords`).value;
+        orders.push({ start: startInput, end: endInput });
       }
-
+    
       fetch('/smart_scheduling', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           num_orders: numOrders,
           priority: priority,
-          order_coords: orderCoords
-        })
+          order_coords: orders,
+        }),
       })
       .then(response => response.json())
       .then(data => {
         const resultDiv = document.getElementById('result');
         resultDiv.innerHTML = '';
-
         if (data.best_routes) {
-          data.best_routes.forEach(routeGroup => {
+          data.best_routes.forEach((routeGroup, index) => {
             routeGroup.forEach(route => {
               resultDiv.innerHTML += `
-                <div>
-                  <h5>${route.source} Route: ${route.route_summary}</h5>
-                  <p>Distance: ${route.distance}</p>
-                  <p>Duration: ${route.duration}</p>
-                  <p>CO2 Emissions: ${route.emissions}</p>
-                </div>
-              `;
+                <div class="card mt-3">
+                  <div class="card-body">
+                    <h5 class="card-title">Route ${index + 1} - ${route.source}</h5>
+                    <p class="card-text">Distance: ${route.distance}</p>
+                    <p class="card-text">Duration: ${route.duration}</p>
+                    <p class="card-text">CO2 Emissions: ${route.emissions}</p>
+                  </div>
+                </div>`;
             });
           });
         }
@@ -89,8 +246,31 @@
         console.error('Error:', error);
       });
     });
-
-    addOrderField();
-  </script>
+    
+    document.getElementById('num_orders').addEventListener('input', () => {
+      const numOrders = document.getElementById('num_orders').value;
+      const container = document.getElementById('orders-container');
+      container.innerHTML = '<h5>Orders</h5>';
+    
+      for (let i = 0; i < numOrders; i++) {
+        container.innerHTML += `
+          <div id="order-${i}" class="order-item">
+            <label>Start Location:</label>
+            <input type="text" class="form-control mb-2 start-coords" placeholder="Search and pin start location">
+            <label>End Location:</label>
+            <input type="text" class="form-control mb-2 end-coords" placeholder="Search and pin end location">
+          </div>`;
+      }
+    
+      document.querySelectorAll('.start-coords').forEach((input, idx) =>
+        addAutocompleteToInput(input, 'start', idx)
+      );
+      document.querySelectorAll('.end-coords').forEach((input, idx) =>
+        addAutocompleteToInput(input, 'end', idx)
+      );
+    });
+    
+    initMap();
+    </script>
 </body>
 </html>

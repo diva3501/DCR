@@ -61,38 +61,40 @@ def get_routes():
 
     return jsonify({'routes': route_details})
 
+@app.route('/smart_scheduling')
+def smart_schedule_page():
+    return render_template('smart_schedule.html', title="Smart Scheduling", google_maps_api_key=GOOGLE_MAPS_API_KEY)
+
 @app.route('/smart_scheduling', methods=['POST'])
     
 def smart_schedule():
     """Handle smart scheduling requests."""
     try:
         data = request.get_json()
-        
         num_orders = data.get('num_orders', 0)
         priority = data.get('priority', 'medium')
         order_coords = data.get('order_coords', [])
-        
-        if not num_orders or num_orders <= 0 or not order_coords:
-            return jsonify({'error': 'Invalid number of orders or coordinates'}), 400
-        
+
+        if not num_orders or not order_coords:
+            return jsonify({'error': 'Invalid inputs'}), 400
+
         all_routes = []
-        
         for order in order_coords:
-            start_coords = order.get('start_coords', '')
-            end_coords = order.get('end_coords', '')
-            
+            start_coords = order['start']
+            end_coords = order['end']
             google_routes = get_google_routes(start_coords, end_coords)
             tomtom_routes = get_tomtom_routes(start_coords, end_coords)
-            
+
             all_routes.append({
                 'start_coords': start_coords,
                 'end_coords': end_coords,
                 'google_routes': google_routes,
                 'tomtom_routes': tomtom_routes
             })
-        
+
         best_routes = optimize_routes(all_routes, num_orders, priority)
         return jsonify({'best_routes': best_routes}), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
