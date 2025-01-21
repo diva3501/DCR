@@ -36,7 +36,6 @@
     function initMap() {
   console.log("Initializing map...");
 
-  // Check if the browser supports Geolocation API
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -47,13 +46,12 @@
 
         console.log("User's current location:", userLocation);
 
-        // Initialize map centered on user's location
         map = new google.maps.Map(document.getElementById("map"), {
           center: userLocation,
           zoom: 13,
         });
 
-        // Place a marker at the user's location
+
         new google.maps.Marker({
           position: userLocation,
           map,
@@ -62,8 +60,6 @@
 
         directionsService = new google.maps.DirectionsService();
         directionsRenderer = new google.maps.DirectionsRenderer({ map });
-
-        // Add click listeners for user interaction
         map.addListener("click", (e) => {
           console.log("Map clicked at:", e.latLng.toJSON());
           if (!startMarker) {
@@ -85,8 +81,6 @@
       (error) => {
         console.error("Error fetching location:", error.message);
         alert("Unable to fetch your current location. Defaulting to Bangalore.");
-
-        // Fallback to Bangalore if geolocation fails
         fallbackToDefaultLocation();
       }
     );
@@ -98,7 +92,7 @@
 }
 
 function fallbackToDefaultLocation() {
-  const defaultLocation = { lat: 12.9716, lng: 77.5946 }; // Bangalore
+  const defaultLocation = { lat: 12.9716, lng: 77.5946 }; 
   map = new google.maps.Map(document.getElementById("map"), {
     center: defaultLocation,
     zoom: 13,
@@ -113,7 +107,6 @@ async function getRoutes() {
   const startCoords = `${startMarker.getPosition().lat()},${startMarker.getPosition().lng()}`;
   const endCoords = `${endMarker.getPosition().lat()},${endMarker.getPosition().lng()}`;
 
-  // Fetch route data from the Flask backend
   const response = await fetch('/get-routes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -125,40 +118,34 @@ async function getRoutes() {
 }
 
 function displayRoutes(routes) {
-  const routeInfo = document.getElementById('route-info');
-  routeInfo.innerHTML = '';
+    const routeInfo = document.getElementById('route-info');
+    routeInfo.innerHTML = '';
 
-  // Clear previous routes
-  if (window.routeRenderers) {
-    window.routeRenderers.forEach(renderer => renderer.setMap(null));
-  }
-  window.routeRenderers = [];
+    if (window.routeRenderers) {
+        window.routeRenderers.forEach(renderer => renderer.setMap(null));
+    }
+    window.routeRenderers = [];
 
-  routes.forEach((route, index) => {
-    // Render each route on the map
-    const directionsRenderer = new google.maps.DirectionsRenderer({
-      map,
-      directions: route.response,
-      routeIndex: route.index,
-      polylineOptions: {
-        strokeColor: index === 0 ? 'blue' : index === 1 ? 'green' : 'red',
-        strokeOpacity: 0.6,
-        strokeWeight: 5
-      }
+    routes.forEach((route, index) => {
+        const polyline = new google.maps.Polyline({
+            path: google.maps.geometry.encoding.decodePath(route.polyline),
+            geodesic: true,
+            strokeColor: index === 0 ? 'green' : index === 1 ? 'yellow' : 'red',
+            strokeOpacity: 0.6,
+            strokeWeight: 5
+        });
+
+        polyline.setMap(map);
+        window.routeRenderers.push(polyline);
+
+        routeInfo.innerHTML += `
+            <a href="#" class="list-group-item list-group-item-action">
+                <h5 style="color:${polyline.strokeColor};">Route ${index + 1}: ${route.summary}</h5>
+                <p style="color:${polyline.strokeColor};">Distance: ${route.distance}, Time: ${route.duration}, Emissions: ${route.emissions}</p>
+            </a>
+        `;
     });
-
-    window.routeRenderers.push(directionsRenderer);
-
-    // Display route details
-    routeInfo.innerHTML += `
-      <a href="#" class="list-group-item list-group-item-action">
-        <h5>Route ${index + 1}: ${route.summary}</h5>
-        <p>Distance: ${route.distance}, Time: ${route.duration}, Emissions: ${route.emissions}</p>
-      </a>
-    `;
-  });
 }
-
 
     window.initMap = initMap;
   </script>

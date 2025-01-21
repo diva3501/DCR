@@ -6,12 +6,8 @@ import os
 
 app = Flask(__name__)
 
-
-
-# Load the .env file
 load_dotenv()
 
-# Access the environment variables
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
 AQICN_API_KEY = os.getenv('AQICN_API_KEY')
@@ -42,7 +38,7 @@ def get_routes():
     routes = response.json().get('routes', [])
 
     route_details = []
-    for route in routes[:3]:
+    for index, route in enumerate(routes[:3]):
         distance = route['legs'][0]['distance']['value'] / 1000 
         duration = route['legs'][0]['duration']['text']
         emissions = calculate_emissions(distance)
