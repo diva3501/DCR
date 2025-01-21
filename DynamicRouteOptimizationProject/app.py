@@ -6,6 +6,7 @@ import requests
 app = Flask(__name__)
 
 TOMTOM_API_KEY = "MVKuv3pCsGAtSHNdjQ7JIj9yorWXSkiQ"
+GOOGLE_MAPS_API_KEY = "AIzaSyA1-EyRPiVG2Qb7TwE5OVW28xnGaZ5kSKo"
 AQICN_API_KEY = "bfd17d0a7a3265bb140f9341cbd22581f0631a98"
 
 @app.route('/')
