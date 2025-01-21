@@ -39,8 +39,8 @@ def get_routes():
     routes = response.json().get('routes', [])
 
     route_details = []
-    for route in routes[:3]:
-        distance = route['legs'][0]['distance']['value'] / 1000
+    for index, route in enumerate(routes[:3]):
+        distance = route['legs'][0]['distance']['value'] / 1000 
         duration = route['legs'][0]['duration']['text']
         emissions = calculate_emissions(distance)
         route_details.append({
