@@ -37,6 +37,13 @@ def get_routes():
     response = requests.get(directions_url, params=params)
     routes = response.json().get('routes', [])
 
+    # Rank routes based on distance or emissions
+    routes = sorted(routes, key=lambda x: (
+        x['legs'][0]['distance']['value'],  # Sort by distance
+        x['legs'][0]['duration']['value'],  # Then by time
+        calculate_emissions(x['legs'][0]['distance']['value'] / 1000)  # Then by emissions
+    ))
+
     route_details = []
     for index, route in enumerate(routes[:3]):
         distance = route['legs'][0]['distance']['value'] / 1000 
