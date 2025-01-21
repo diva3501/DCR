@@ -3,9 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dynamic Routing System</title>
+  <title>Route Planner</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <style>
+    body {
+      margin-top: 56px;
+    }
     #map {
       height: 60vh;
       width: 100%;
@@ -17,8 +20,11 @@
   </style>
 </head>
 <body>
+
+  {% include 'navbar.html' %}
+
   <div class="container">
-    <h1 class="text-center my-4">Dynamic Routing System</h1>
+    <h1 class="text-center my-4">Route Planner</h1>
     <div id="map"></div>
     <div class="info-box mt-4">
       <div class="list-group" id="route-info"></div>
@@ -26,10 +32,9 @@
   </div>
 
   <script
-  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initMap"
-  async
-  defer
-></script>
+    src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initMap"
+    async defer>
+  </script>
   <script>
     let map, startMarker, endMarker, directionsService, directionsRenderer;
 
