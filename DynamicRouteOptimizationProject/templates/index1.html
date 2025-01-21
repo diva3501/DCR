@@ -1,158 +1,287 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Route Planner</title>
+  <title>Enhanced Route Planner</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <style>
     body {
-      margin-top: 56px;
+      background: linear-gradient(to right, #ece9e6, #ffffff);
+      font-family: "Roboto", sans-serif;
     }
+
     #map {
-      height: 60vh;
+      height: 65vh;
       width: 100%;
-      border: 1px solid #ddd;
-    }
-    .info-box {
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
       margin-top: 20px;
+    }
+
+    .info-box {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .info-box h5 {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    .search-input {
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+
+    .btn-plan {
+      background: linear-gradient(90deg, #56ab2f, #a8e063);
+      border: none;
+      color: white;
+      font-weight: 600;
+      transition: 0.3s ease;
+      width: 100%;
+    }
+
+    .btn-plan:hover {
+      background: linear-gradient(90deg, #45a049, #81c684);
+      transform: scale(1.05);
+    }
+
+    .route-option {
+      padding: 12px 20px;
+      background: #f7f7f7;
+      margin-bottom: 15px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .route-option:hover {
+      background: #e9ecef;
+      transform: scale(1.02);
+    }
+
+    .route-option h6 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #444;
+    }
+
+    .route-option p {
+      margin: 0;
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    .highlighted-route {
+      border-left: 4px solid #56ab2f;
+      background: #eef9ef !important;
+    }
+
+    .route-distance {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #56ab2f;
+    }
+
+    .route-duration {
+      font-size: 1rem;
+      color: #333;
+    }
+
+    .route-number {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .route-emission {
+      font-size: 1rem;
+      color: #e74c3c;
+      font-weight: bold;
+    }
+
+    @media (max-width: 768px) {
+      #map {
+        margin-top: 30px;
+      }
+
+      .info-box {
+        margin-bottom: 30px;
+      }
     }
   </style>
 </head>
-<body>
 
+<body>
   {% include 'navbar.html' %}
 
-  <div class="container">
-    <h1 class="text-center my-4">Route Planner</h1>
-    <div id="map"></div>
-    <div class="info-box mt-4">
-      <div class="list-group" id="route-info"></div>
+  <div class="container my-4">
+    <h1 class="text-center text-dark mb-4">Enhanced Route Planner</h1>
+    <div class="row">
+      <div class="col-lg-4">
+        <div class="info-box">
+          <h5>Set Your Locations</h5>
+          <input id="start-input" type="text" class="form-control search-input" placeholder="Enter Start Location" />
+          <input id="end-input" type="text" class="form-control search-input" placeholder="Enter End Location" />
+          <button id="plan-route" class="btn btn-plan mt-3">
+            Plan Route
+          </button>
+        </div>
+        <div class="info-box mt-4">
+          <h5>Route Options</h5>
+          <div id="route-info" class="list-group"></div>
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <div id="map"></div>
+      </div>
     </div>
   </div>
 
-  <script
-    src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initMap"
-    async defer>
-  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places,geometry&callback=initMap" async defer></script>
   <script>
-    let map, startMarker, endMarker, directionsService, directionsRenderer;
+    let map, directionsService, currentPosition;
+    let routePolylines = [];
 
+    // Initialize Map and set current location
     function initMap() {
-  console.log("Initializing map...");
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 12.9716, lng: 77.5946 },
+        zoom: 12,
+      });
 
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const userLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
+      directionsService = new google.maps.DirectionsService();
 
-        console.log("User's current location:", userLocation);
-
-        map = new google.maps.Map(document.getElementById("map"), {
-          center: userLocation,
-          zoom: 13,
+      // Get Current Location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (position) {
+          currentPosition = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          map.setCenter(currentPosition); // Center the map on the user's location
+          addMarker(currentPosition, "Your Location", "blue"); // Marker for user's location
         });
-
-
-        new google.maps.Marker({
-          position: userLocation,
-          map,
-          title: "Your Location",
-        });
-
-        directionsService = new google.maps.DirectionsService();
-        directionsRenderer = new google.maps.DirectionsRenderer({ map });
-        map.addListener("click", (e) => {
-          console.log("Map clicked at:", e.latLng.toJSON());
-          if (!startMarker) {
-            startMarker = new google.maps.Marker({
-              position: e.latLng,
-              map,
-            });
-            console.log("Start point set:", e.latLng.toJSON());
-          } else if (!endMarker) {
-            endMarker = new google.maps.Marker({
-              position: e.latLng,
-              map,
-            });
-            console.log("End point set:", e.latLng.toJSON());
-            getRoutes();
-          }
-        });
-      },
-      (error) => {
-        console.error("Error fetching location:", error.message);
-        alert("Unable to fetch your current location. Defaulting to Bangalore.");
-        fallbackToDefaultLocation();
       }
-    );
-  } else {
-    console.error("Geolocation is not supported by this browser.");
-    alert("Geolocation is not supported by your browser. Defaulting to Bangalore.");
-    fallbackToDefaultLocation();
-  }
-}
 
-function fallbackToDefaultLocation() {
-  const defaultLocation = { lat: 12.9716, lng: 77.5946 }; 
-  map = new google.maps.Map(document.getElementById("map"), {
-    center: defaultLocation,
-    zoom: 13,
-  });
+      const startInput = document.getElementById("start-input");
+      const endInput = document.getElementById("end-input");
 
-  directionsService = new google.maps.DirectionsService();
-  directionsRenderer = new google.maps.DirectionsRenderer({ map });
-}
+      new google.maps.places.Autocomplete(startInput);
+      new google.maps.places.Autocomplete(endInput);
 
+      document.getElementById("plan-route").addEventListener("click", () => {
+        const start = startInput.value.trim();
+        const end = endInput.value.trim();
 
-async function getRoutes() {
-  const startCoords = `${startMarker.getPosition().lat()},${startMarker.getPosition().lng()}`;
-  const endCoords = `${endMarker.getPosition().lat()},${endMarker.getPosition().lng()}`;
-
-  const response = await fetch('/get-routes', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ start_coords: startCoords, end_coords: endCoords })
-  });
-
-  const data = await response.json();
-  displayRoutes(data.routes);
-}
-
-function displayRoutes(routes) {
-    const routeInfo = document.getElementById('route-info');
-    routeInfo.innerHTML = '';
-
-    if (window.routeRenderers) {
-        window.routeRenderers.forEach(renderer => renderer.setMap(null));
+        if (start && end) {
+          calculateRoutes(start, end);
+        } else {
+          alert("Please enter both start and end locations.");
+        }
+      });
     }
-    window.routeRenderers = [];
 
-    routes.forEach((route, index) => {
+    function calculateRoutes(start, end) {
+      const request = {
+        origin: start,
+        destination: end,
+        travelMode: google.maps.TravelMode.DRIVING,
+        provideRouteAlternatives: true,
+      };
+
+      directionsService.route(request, (result, status) => {
+        if (status === "OK") {
+          displayRoutes(result.routes);
+        } else {
+          alert("Unable to calculate routes. Please try again.");
+        }
+      });
+    }
+
+    function displayRoutes(routes) {
+      const routeInfo = document.getElementById("route-info");
+      routeInfo.innerHTML = "";
+      routePolylines.forEach(polyline => polyline.setMap(null));
+      routePolylines = [];
+
+      // Sort the routes by duration (or distance if preferred)
+      routes.sort((a, b) => a.legs[0].duration.value - b.legs[0].duration.value);
+
+      routes.forEach((route, index) => {
+        const routeColor = getRouteColor(index);
         const polyline = new google.maps.Polyline({
-            path: google.maps.geometry.encoding.decodePath(route.polyline),
-            geodesic: true,
-            strokeColor: index === 0 ? 'green' : index === 1 ? 'yellow' : 'red',
-            strokeOpacity: 0.6,
-            strokeWeight: 5
+          path: google.maps.geometry.encoding.decodePath(route.overview_polyline),
+          geodesic: true,
+          strokeColor: routeColor,
+          strokeOpacity: 0.7,
+          strokeWeight: 6,
         });
 
         polyline.setMap(map);
-        window.routeRenderers.push(polyline);
+        routePolylines.push(polyline);
 
-        routeInfo.innerHTML += `
-            <a href="#" class="list-group-item list-group-item-action">
-                <h5 style="color:${polyline.strokeColor};">Route ${index + 1}: ${route.summary}</h5>
-                <p style="color:${polyline.strokeColor};">Distance: ${route.distance}, Time: ${route.duration}, Emissions: ${route.emissions}</p>
-            </a>
+        const routeDiv = document.createElement("div");
+        routeDiv.className = `route-option`;
+        routeDiv.innerHTML = `
+          <div>
+            <div class="route-number" style="color:${routeColor};">Route ${index + 1}</div>
+            <p class="route-distance">Distance: ${route.legs[0].distance.text}</p>
+            <p class="route-duration">Duration: ${route.legs[0].duration.text}</p>
+            <p class="route-emission">Emission: ${calculateEmission(route)} gCO₂/km</p>
+          </div>
         `;
-    });
-}
+
+        routeDiv.addEventListener("click", () => {
+          map.fitBounds(route.bounds);
+          routeDiv.classList.add("highlighted-route");
+        });
+
+        routeInfo.appendChild(routeDiv);
+      });
+    }
+
+    function getRouteColor(index) {
+      const colors = ['#56ab2f', '#1c87c9', '#f39c12']; // Green, Blue, and Yellow
+      return colors[index] || '#999'; // Default to gray if there are more than 3 routes
+    }
+
+    function calculateEmission(route) {
+      // Example: Estimate emission as 100g per km for simplicity
+      const distanceInKm = route.legs[0].distance.value / 1000; // Convert from meters to kilometers
+      const emissionFactor = 100; // Emission factor in grams per kilometer (this is a simplistic value)
+      return (distanceInKm * emissionFactor).toFixed(0);
+    }
+
+    function addMarker(position, title, color) {
+      new google.maps.Marker({
+        position: position,
+        map: map,
+        title: title,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 6,
+          fillColor: color,
+          fillOpacity: 0.7,
+          strokeColor: color,
+          strokeWeight: 1,
+        },
+      });
+    }
 
     window.initMap = initMap;
   </script>
 </body>
+
 </html>

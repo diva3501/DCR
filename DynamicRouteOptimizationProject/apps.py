@@ -62,6 +62,7 @@ def get_routes():
     return jsonify({'routes': route_details})
 
 @app.route('/smart_scheduling', methods=['POST'])
+    
 def smart_schedule():
     """Handle smart scheduling requests."""
     try:
