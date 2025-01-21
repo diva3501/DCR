@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <!-- Leaflet Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 </head>
 <body>
     {% include 'navbar.html' %}
@@ -49,6 +51,8 @@
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <!-- Leaflet Geocoder JS -->
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 
@@ -59,8 +63,34 @@
         }).addTo(map);
 
         var startMarker, endMarker, routeLines = [];
-        
-        // Map Click event for selecting start and end locations
+
+        // Add Geocoder search control
+        var geocoder = L.Control.Geocoder.nominatim();
+        L.control.geocoder(geocoder).addTo(map);
+
+        // Geocoding handler to set markers and address values
+        function onLocationSelected(results) {
+            if (results && results.length > 0) {
+                var latlng = results[0].center;
+
+                if (!startMarker) {
+                    startMarker = L.marker(latlng).addTo(map);
+                    document.getElementById('start').value = latlng.lat + "," + latlng.lng;
+                } else if (!endMarker) {
+                    endMarker = L.marker(latlng).addTo(map);
+                    document.getElementById('end').value = latlng.lat + "," + latlng.lng;
+                } else {
+                    // Reset markers if both are set
+                    map.removeLayer(startMarker);
+                    map.removeLayer(endMarker);
+                    startMarker = L.marker(latlng).addTo(map);
+                    endMarker = null;
+                    document.getElementById('start').value = latlng.lat + "," + latlng.lng;
+                    document.getElementById('end').value = "";
+                }
+            }
+        }
+
         map.on('click', function(e) {
             if (!startMarker) {
                 startMarker = L.marker(e.latlng).addTo(map);
@@ -79,6 +109,12 @@
                 document.getElementById('end').value = '';
             }
         });
+
+        // Add search option for location input
+        var searchControl = new L.Control.Geocoder({
+            collapsed: false,
+            geocoder: L.Control.Geocoder.nominatim()
+        }).on('markgeocode', onLocationSelected).addTo(map);
 
         document.getElementById("routeForm").addEventListener("submit", function(event) {
             event.preventDefault();
@@ -154,3 +190,4 @@
     </script>
 </body>
 </html>
+y

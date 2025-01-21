@@ -1,6 +1,5 @@
 (function () {
-    // Initialize Leaflet Map with default view
-    const map = L.map('map').setView([51.505, -0.09], 13);
+    const map = L.map('map').setView([51.505, -0.09], 13);  
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19
@@ -9,13 +8,12 @@
     let startMarker, endMarker;
     let startLatLng, endLatLng;
 
-    // Geolocation to fetch user's current location
     function setMapToUserLocation() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords;
-                    map.setView([latitude, longitude], 13);
+                    map.setView([latitude, longitude], 13);  
                     L.marker([latitude, longitude])
                         .addTo(map)
                         .bindPopup('You are here')
@@ -31,10 +29,8 @@
         }
     }
 
-    // Call the function to set the map to the user's location
     setMapToUserLocation();
 
-    // Add markers for start and end points on the map
     map.on('click', (e) => {
         if (!startMarker) {
             startLatLng = e.latlng;
@@ -57,15 +53,13 @@
         endLatLng = null;
     };
 
-    // Route form submission
     document.getElementById('routeForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
+        e.preventDefault();  
     
         const start = document.getElementById('start').value;
         const end = document.getElementById('end').value;
         const vehicleType = document.getElementById('vehicle_type').value;
         const fuelType = document.getElementById('fuel_type').value;
-    
         if (!start || !end) {
             document.getElementById('error').style.display = 'block';
             document.getElementById('error').innerText = 'Please select both start and end locations.';
@@ -73,25 +67,29 @@
         }
     
         try {
+       
             const response = await fetch('/route', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ start, end, vehicle_type: vehicleType, fuel_type: fuelType })
             });
-    
+
             const data = await response.json();
-    
+
+            // Debugging: Log response for review
             console.log('Backend Response:', response);
             console.log('Response Data:', data);
     
+            // Handle the response from the server
             if (response.ok) {
+                // Show route details in the UI
                 document.getElementById('routeDetails').style.display = 'block';
                 document.getElementById('error').style.display = 'none';
-    
-                // Correctly accessing fields from `best_route`
+
+                // Destructure the response data for route, emissions, and weather
                 const { best_route, emissions, weather } = data;
                 const { distance_km, duration_min } = best_route;
-    
+
                 document.getElementById('routeDetails').innerHTML = `
                     <p><strong>Distance:</strong> ${distance_km.toFixed(2)} km</p>
                     <p><strong>Duration:</strong> ${duration_min.toFixed(2)} minutes</p>
@@ -102,6 +100,7 @@
                 throw new Error(data.error || 'An unknown error occurred.');
             }
         } catch (err) {
+            // Error handling
             console.error('Error details:', err);
             const errorMessage = err.message || 'Failed to fetch route details.';
             document.getElementById('error').style.display = 'block';
