@@ -3,6 +3,7 @@ import requests
 import math
 from dotenv import load_dotenv
 import os
+import datetime
 
 app = Flask(__name__)
 load_dotenv()
@@ -165,7 +166,6 @@ def calculate_multi_routes():
     Calculate and optimize routes with traffic data for multiple destinations.
     """
     try:
-        # Parse input data from the frontend
         data = request.get_json()
         start_location = data['start_location']
         destinations = data['destinations']
@@ -228,7 +228,7 @@ def calculate_emissions(distance_km):
     Calculate emissions based on the distance.
     Assume 120g CO₂ per km for a car.
     """
-    emission_rate = 0.12  # kg CO₂ per km
+    emission_rate = 0.12  
     return distance_km * emission_rate
 
 
@@ -240,6 +240,30 @@ def estimate_arrival_time(duration_seconds):
     current_time = datetime.now()
     arrival_time = current_time + timedelta(seconds=duration_seconds)
     return arrival_time.strftime('%I:%M %p')
+
+@app.route('/reschedule')
+def index():
+    return render_template('rescheduling.html', title="Real-Time Delivery Rescheduling System")
+
+@app.route('/reschedule', methods=['POST'])
+def reschedule():
+    try:
+        data = request.json
+        delivery_id = data.get("delivery_id")
+        new_date = data.get("new_date")
+        new_time = data.get("new_time")
+        alternate_option = data.get("alternate_option")
+
+        if not (delivery_id and (new_date or alternate_option)):
+            return jsonify({"status": "failure", "message": "Missing required fields"}), 400
+
+        response_message = f"Delivery {delivery_id} successfully rescheduled to {new_date} at {new_time}" \
+            if new_date else f"Delivery {delivery_id} updated with alternate option: {alternate_option}"
+
+        return jsonify({"status": "success", "message": response_message}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
