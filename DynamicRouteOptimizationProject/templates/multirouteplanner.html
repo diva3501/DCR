@@ -3,33 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
+    <title>Enhanced Multi-Route Planner</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        #map {
+            height: 500px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .route-summary-table th,
+        .route-summary-table td {
+            vertical-align: middle;
+        }
+        .info-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: #ffffff;
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body>
     {% include 'navbar.html' %}
     <div class="container my-5">
-        <h1 class="text-center mb-4">Multi-Route Planner</h1>
+        <h1 class="text-center mb-4">Enhanced Multi-Route Planner</h1>
 
-        <form id="route-form" class="mb-5 p-3 border bg-white">
-            <div class="mb-3">
-                <label for="start-location" class="form-label">Start Location:</label>
-                <input type="text" id="start-location" class="form-control" placeholder="Enter start location" required>
-            </div>
-            <div class="mb-3">
-                <label for="destinations" class="form-label">Destinations:</label>
-                <textarea id="destinations" class="form-control" rows="4" placeholder="Enter destinations, one per line" required></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Calculate Routes</button>
-        </form>
+        <div class="info-card mb-5">
+            <form id="route-form">
+                <div class="mb-3">
+                    <label for="start-location" class="form-label">Start Location:</label>
+                    <input type="text" id="start-location" class="form-control" placeholder="Enter start location" required>
+                </div>
+                <div class="mb-3">
+                    <label for="destinations" class="form-label">Destinations:</label>
+                    <textarea id="destinations" class="form-control" rows="4" placeholder="Enter destinations, one per line" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Calculate Routes</button>
+            </form>
+        </div>
 
-        <div id="map" class="mb-4" style="height: 500px; border: 1px solid #ccc;"></div>
-        <div id="route-summary" class="p-3 border bg-white">
+        <div id="map"></div>
+
+        <div class="info-card mt-4">
             <h5>Route Summary</h5>
-            <p id="emissions" class="text-muted">Enter routes to see emission data.</p>
+            <table class="table route-summary-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Location</th>
+                        <th>Estimated Arrival</th>
+                        <th>Distance (km)</th>
+                        <th>Duration (mins)</th>
+                    </tr>
+                </thead>
+                <tbody id="route-details">
+                </tbody>
+            </table>
+            <p id="emissions" class="text-muted">Enter routes to calculate total emissions.</p>
         </div>
     </div>
 
@@ -41,21 +77,21 @@
         function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
                 zoom: 7,
-                center: { lat: 20.5937, lng: 78.9629 }, // India coordinates for default view
+                center: { lat: 20.5937, lng: 78.9629 }, 
             });
             directionsRenderer = new google.maps.DirectionsRenderer({
                 map: map,
                 suppressMarkers: false,
                 polylineOptions: {
-                    strokeColor: "#FF0000",
-                    strokeWeight: 5,
+                    strokeColor: "#2196F3",
+                    strokeWeight: 6,
                 },
             });
             directionsService = new google.maps.DirectionsService();
         }
 
         function renderRouteOnMap(start, destinations) {
-            const waypoints = destinations.slice(0, -1).map(dest => ({ location: dest, stopover: true }));
+            const waypoints = destinations.slice(0, -1).map(location => ({ location, stopover: true }));
             const request = {
                 origin: start,
                 destination: destinations[destinations.length - 1],
@@ -69,13 +105,48 @@
                     directionsRenderer.setDirections(result);
 
                     const route = result.routes[0];
-                    const totalDistance = route.legs.reduce((sum, leg) => sum + leg.distance.value, 0) / 1000; 
-                    const emissions = (totalDistance * 0.12).toFixed(2); 
+                    const routeDetails = document.getElementById("route-details");
+                    routeDetails.innerHTML = ""; 
 
+                    let totalDistance = 0;
+                    let totalDuration = 0;
+
+                    route.legs.forEach((leg, index) => {
+                        totalDistance += leg.distance.value / 1000; 
+                        totalDuration += leg.duration.value / 60;
+
+                        const arrivalTime = new Date(Date.now() + totalDuration * 60000).toLocaleTimeString();
+
+                        const row = `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${leg.start_address}</td>
+                                <td>${arrivalTime}</td>
+                                <td>${(leg.distance.value / 1000).toFixed(2)}</td>
+                                <td>${(leg.duration.value / 60).toFixed(2)}</td>
+                            </tr>
+                        `;
+                        routeDetails.insertAdjacentHTML("beforeend", row);
+                    });
+
+                    const lastLeg = route.legs[route.legs.length - 1];
+                    const finalArrivalTime = new Date(Date.now() + totalDuration * 60000).toLocaleTimeString();
+                    const lastRow = `
+                        <tr>
+                            <td>${route.legs.length + 1}</td>
+                            <td>${lastLeg.end_address}</td>
+                            <td>${finalArrivalTime}</td>
+                            <td>0</td>
+                            <td>0</td>
+                        </tr>
+                    `;
+                    routeDetails.insertAdjacentHTML("beforeend", lastRow);
+
+                    const emissions = (totalDistance * 0.12).toFixed(2); 
                     document.getElementById("emissions").textContent =
                         `Total Distance: ${totalDistance.toFixed(2)} km | Estimated Emissions: ${emissions} kg CO₂`;
                 } else {
-                    alert("Unable to calculate route.");
+                    alert("Unable to calculate route. Check inputs and try again.");
                 }
             });
         }
@@ -89,7 +160,7 @@
                 const destinations = $("#destinations")
                     .val()
                     .split("\n")
-                    .map(item => item.trim())
+                    .map(location => location.trim())
                     .filter(Boolean);
 
                 if (startLocation && destinations.length > 0) {
