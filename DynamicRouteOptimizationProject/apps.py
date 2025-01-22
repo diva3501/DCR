@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 import os
 
 app = Flask(__name__)
-
 load_dotenv()
 
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
