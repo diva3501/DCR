@@ -154,5 +154,58 @@ def optimize_routes(all_routes, num_orders, priority):
         best_routes.append(route_data[:1])  
     return best_routes
 
+@app.route('/calculate-multi-routes')
+def multirouteplanner():
+    return render_template('multirouteplanner.html', title="Multi-Route Planner", google_maps_api_key=GOOGLE_MAPS_API_KEY)
+
+@app.route('/calculate-multi-routes', methods=['POST'])
+def calculate_multi_routes():
+    """
+    Calculate and optimize routes to multiple destinations
+    """
+    try:
+        data = request.get_json()
+        start_location = data['start_location']
+        destinations = data['destinations']
+
+        routes = []
+        for destination in destinations:
+            response = get_route_from_google_maps(start_location, destination)
+            for route in response.get('routes', []):
+                distance_km = route['legs'][0]['distance']['value'] / 1000
+                duration = route['legs'][0]['duration']['text']
+                emissions = calculate_emissions(distance_km)
+                routes.append({
+                    'destination': destination,
+                    'distance': f"{distance_km:.2f} km",
+                    'duration': duration,
+                    'emissions': f"{emissions} kg CO₂",
+                    'polyline': route['overview_polyline']['points']
+                })
+
+        routes = sorted(routes, key=lambda x: (float(x['distance'].split()[0]), float(x['emissions'].split()[0])))
+
+        return jsonify({'routes': routes}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def get_route_from_google_maps(start_coords, end_coords):
+    """Fetch route information from Google Maps API."""
+    try:
+        directions_url = "https://maps.googleapis.com/maps/api/directions/json"
+        params = {
+            'origin': start_coords,
+            'destination': end_coords,
+            'key': GOOGLE_MAPS_API_KEY,
+            'alternatives': 'true',
+        }
+        response = requests.get(directions_url, params=params)
+        if response.status_code == 200:
+            return response.json()
+        return {}
+    except Exception as e:
+        print(f"Error fetching routes: {e}")
+        return {}
+
 if __name__ == '__main__':
     app.run(debug=True)
