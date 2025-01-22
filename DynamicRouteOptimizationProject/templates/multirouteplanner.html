@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Multi-Route Planner</title>
-
+    <title>Smart Multi-Route Planner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -12,161 +11,194 @@
         body {
             background-color: #f8f9fa;
         }
+        .container {
+            max-width: 1200px;
+        }
         #map {
             height: 500px;
             border-radius: 8px;
             margin-bottom: 20px;
         }
-        .route-summary-table th,
-        .route-summary-table td {
-            vertical-align: middle;
-        }
         .info-card {
+            padding: 15px;
+            background-color: white;
             border: 1px solid #ddd;
             border-radius: 8px;
-            padding: 15px;
-            background: #ffffff;
+        }
+        #route-results {
+            overflow-y: auto;
+            max-height: 250px;
         }
     </style>
 </head>
 <body>
-    {% include 'navbar.html' %}
     <div class="container my-5">
-        <h1 class="text-center mb-4">Enhanced Multi-Route Planner</h1>
+        <h1 class="text-center mb-4">Smart Multi-Route Planner</h1>
 
-        <div class="info-card mb-5">
-            <form id="route-form">
-                <div class="mb-3">
-                    <label for="start-location" class="form-label">Start Location:</label>
-                    <input type="text" id="start-location" class="form-control" placeholder="Enter start location" required>
+        <div class="row">
+            <div class="col-lg-4 mb-3">
+                <div class="info-card">
+                    <form id="route-form">
+                        <div class="mb-3">
+                            <label for="start-location" class="form-label">Start Location:</label>
+                            <input type="text" id="start-location" class="form-control" placeholder="Enter start location" required>
+                            <button id="geolocate" type="button" class="btn btn-sm btn-link">Use My Location</button>
+                        </div>
+                        <div class="mb-3">
+                            <label for="destinations" class="form-label">Destinations:</label>
+                            <textarea id="destinations" class="form-control" rows="4" placeholder="Enter destinations, one per line" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="travel-mode" class="form-label">Travel Mode:</label>
+                            <select id="travel-mode" class="form-select">
+                                <option value="DRIVING">Driving</option>
+                                <option value="WALKING">Walking</option>
+                                <option value="BICYCLING">Bicycling</option>
+                                <option value="TRANSIT">Transit</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Plan My Route</button>
+                    </form>
                 </div>
-                <div class="mb-3">
-                    <label for="destinations" class="form-label">Destinations:</label>
-                    <textarea id="destinations" class="form-control" rows="4" placeholder="Enter destinations, one per line" required></textarea>
+            </div>
+
+            <div class="col-lg-8">
+                <div id="map"></div>
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" id="toggle-traffic">
+                    <label class="form-check-label" for="toggle-traffic">Show Traffic</label>
                 </div>
-                <button type="submit" class="btn btn-primary w-100">Calculate Routes</button>
-            </form>
+            </div>
         </div>
-
-        <div id="map"></div>
 
         <div class="info-card mt-4">
             <h5>Route Summary</h5>
-            <table class="table route-summary-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Location</th>
-                        <th>Estimated Arrival</th>
-                        <th>Distance (km)</th>
-                        <th>Duration (mins)</th>
-                    </tr>
-                </thead>
-                <tbody id="route-details">
-                </tbody>
-            </table>
-            <p id="emissions" class="text-muted">Enter routes to calculate total emissions.</p>
+            <div id="route-results">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Location</th>
+                            <th>Estimated Arrival</th>
+                            <th>Distance (km)</th>
+                            <th>Duration (mins)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="route-details"></tbody>
+                </table>
+            </div>
+            <p id="weather" class="text-muted">Weather information will appear here.</p>
         </div>
     </div>
 
     <script>
-        let map;
-        let directionsRenderer;
-        let directionsService;
+        let map, directionsRenderer, directionsService, trafficLayer, geocoder;
+        let trafficLayerVisible = false;
 
         function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
                 zoom: 7,
                 center: { lat: 20.5937, lng: 78.9629 }, 
             });
-            directionsRenderer = new google.maps.DirectionsRenderer({
-                map: map,
-                suppressMarkers: false,
-                polylineOptions: {
-                    strokeColor: "#2196F3",
-                    strokeWeight: 6,
-                },
-            });
+
+            directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
             directionsService = new google.maps.DirectionsService();
+            geocoder = new google.maps.Geocoder();
+            trafficLayer = new google.maps.TrafficLayer();
+
+            document.getElementById("toggle-traffic").addEventListener("change", (event) => {
+                trafficLayerVisible = event.target.checked;
+                if (trafficLayerVisible) {
+                    trafficLayer.setMap(map);
+                    event.target.nextElementSibling.innerText = "Hide Traffic";
+                } else {
+                    trafficLayer.setMap(null);
+                    event.target.nextElementSibling.innerText = "Show Traffic";
+                }
+            });
         }
 
-        function renderRouteOnMap(start, destinations) {
-            const waypoints = destinations.slice(0, -1).map(location => ({ location, stopover: true }));
+        function calculateRoute(start, destinations, travelMode) {
+            const waypoints = destinations.slice(0, -1).map(loc => ({ location: loc, stopover: true }));
+
             const request = {
                 origin: start,
                 destination: destinations[destinations.length - 1],
-                travelMode: google.maps.TravelMode.DRIVING,
                 waypoints: waypoints,
-                optimizeWaypoints: true,
+                travelMode: travelMode,
+                drivingOptions: {
+                    departureTime: new Date(),
+                },
             };
 
             directionsService.route(request, (result, status) => {
                 if (status === google.maps.DirectionsStatus.OK) {
                     directionsRenderer.setDirections(result);
-
                     const route = result.routes[0];
-                    const routeDetails = document.getElementById("route-details");
-                    routeDetails.innerHTML = ""; 
 
-                    let totalDistance = 0;
-                    let totalDuration = 0;
-
-                    route.legs.forEach((leg, index) => {
-                        totalDistance += leg.distance.value / 1000; 
-                        totalDuration += leg.duration.value / 60;
-
-                        const arrivalTime = new Date(Date.now() + totalDuration * 60000).toLocaleTimeString();
-
+                    let detailsTable = document.getElementById("route-details");
+                    detailsTable.innerHTML = "";
+                    
+                    route.legs.forEach((leg, i) => {
+                        let duration = leg.duration_in_traffic ? leg.duration_in_traffic.text : leg.duration.text;
+                        let distance = leg.distance.text;
+                        let arrival = new Date(Date.now() + (leg.duration.value * 1000)).toLocaleTimeString();
+                        
                         const row = `
                             <tr>
-                                <td>${index + 1}</td>
+                                <td>${i + 1}</td>
                                 <td>${leg.start_address}</td>
-                                <td>${arrivalTime}</td>
-                                <td>${(leg.distance.value / 1000).toFixed(2)}</td>
-                                <td>${(leg.duration.value / 60).toFixed(2)}</td>
-                            </tr>
-                        `;
-                        routeDetails.insertAdjacentHTML("beforeend", row);
+                                <td>${arrival}</td>
+                                <td>${distance}</td>
+                                <td>${duration}</td>
+                            </tr>`;
+                        detailsTable.insertAdjacentHTML("beforeend", row);
                     });
-
-                    const lastLeg = route.legs[route.legs.length - 1];
-                    const finalArrivalTime = new Date(Date.now() + totalDuration * 60000).toLocaleTimeString();
-                    const lastRow = `
-                        <tr>
-                            <td>${route.legs.length + 1}</td>
-                            <td>${lastLeg.end_address}</td>
-                            <td>${finalArrivalTime}</td>
-                            <td>0</td>
-                            <td>0</td>
-                        </tr>
-                    `;
-                    routeDetails.insertAdjacentHTML("beforeend", lastRow);
-
-                    const emissions = (totalDistance * 0.12).toFixed(2); 
-                    document.getElementById("emissions").textContent =
-                        `Total Distance: ${totalDistance.toFixed(2)} km | Estimated Emissions: ${emissions} kg CO₂`;
                 } else {
-                    alert("Unable to calculate route. Check inputs and try again.");
+                    alert("Error fetching route: " + status);
                 }
             });
         }
 
-        $(document).ready(function () {
+        async function fetchWeather(lat, lng) {
+            const apiKey = "YOUR_OPENWEATHER_API_KEY";
+            const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${apiKey}&units=metric`;
+            const response = await fetch(url);
+            const data = await response.json();
+            const weather = `${data.weather[0].description}, Temp: ${data.main.temp}°C`;
+            document.getElementById("weather").innerText = "Weather at start location: " + weather;
+        }
+
+        document.getElementById("geolocate").addEventListener("click", () => {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    fetchWeather(latitude, longitude);
+
+                    geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results, status) => {
+                        if (status === "OK" && results[0]) {
+                            document.getElementById("start-location").value = results[0].formatted_address;
+                        }
+                    });
+                },
+                () => alert("Geolocation failed!"),
+                { enableHighAccuracy: true }
+            );
+        });
+
+        $(document).ready(() => {
             initMap();
 
-            $("#route-form").on("submit", function (e) {
-                e.preventDefault();
-                const startLocation = $("#start-location").val();
-                const destinations = $("#destinations")
-                    .val()
-                    .split("\n")
-                    .map(location => location.trim())
-                    .filter(Boolean);
+            $("#route-form").on("submit", function (event) {
+                event.preventDefault();
+                const start = $("#start-location").val();
+                const destinations = $("#destinations").val().split("\n").filter(Boolean);
+                const travelMode = $("#travel-mode").val();
 
-                if (startLocation && destinations.length > 0) {
-                    renderRouteOnMap(startLocation, [startLocation, ...destinations]);
+                if (start && destinations.length) {
+                    calculateRoute(start, [start, ...destinations], travelMode);
                 } else {
-                    alert("Please enter valid start and destination locations.");
+                    alert("Please enter a valid start and destinations.");
                 }
             });
         });

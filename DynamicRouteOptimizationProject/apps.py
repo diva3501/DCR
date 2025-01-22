@@ -158,54 +158,88 @@ def optimize_routes(all_routes, num_orders, priority):
 def multirouteplanner():
     return render_template('multirouteplanner.html', title="Multi-Route Planner", google_maps_api_key=GOOGLE_MAPS_API_KEY)
 
+
 @app.route('/calculate-multi-routes', methods=['POST'])
 def calculate_multi_routes():
     """
-    Calculate and optimize routes to multiple destinations
+    Calculate and optimize routes with traffic data for multiple destinations.
     """
     try:
+        # Parse input data from the frontend
         data = request.get_json()
         start_location = data['start_location']
         destinations = data['destinations']
 
+        # Initialize routes list
         routes = []
-        for destination in destinations:
+
+        # Loop through destinations and fetch route data
+        for index, destination in enumerate(destinations):
             response = get_route_from_google_maps(start_location, destination)
             for route in response.get('routes', []):
-                distance_km = route['legs'][0]['distance']['value'] / 1000
-                duration = route['legs'][0]['duration']['text']
+                distance_km = route['legs'][0]['distance']['value'] / 1000  # Convert meters to km
+                duration_traffic = route['legs'][0].get('duration_in_traffic', {}).get('text', route['legs'][0]['duration']['text'])
                 emissions = calculate_emissions(distance_km)
+                arrival_time = estimate_arrival_time(route['legs'][0]['duration_in_traffic']['value'] if 'duration_in_traffic' in route['legs'][0] else route['legs'][0]['duration']['value'])
+
+                # Append route details
                 routes.append({
                     'destination': destination,
                     'distance': f"{distance_km:.2f} km",
-                    'duration': duration,
-                    'emissions': f"{emissions} kg CO₂",
+                    'duration': duration_traffic,
+                    'arrival_time': arrival_time,
+                    'emissions': f"{emissions:.2f} kg CO₂",
                     'polyline': route['overview_polyline']['points']
                 })
 
+        # Sort routes by shortest distance and emissions
         routes = sorted(routes, key=lambda x: (float(x['distance'].split()[0]), float(x['emissions'].split()[0])))
 
         return jsonify({'routes': routes}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 def get_route_from_google_maps(start_coords, end_coords):
-    """Fetch route information from Google Maps API."""
+    """
+    Fetch route information from Google Maps API with real-time traffic data.
+    """
     try:
         directions_url = "https://maps.googleapis.com/maps/api/directions/json"
         params = {
             'origin': start_coords,
             'destination': end_coords,
             'key': GOOGLE_MAPS_API_KEY,
+            'departure_time': 'now',  # For traffic data
             'alternatives': 'true',
         }
         response = requests.get(directions_url, params=params)
         if response.status_code == 200:
             return response.json()
-        return {}
+        else:
+            raise ValueError(f"Error in Google Maps API Response: {response.status_code}")
     except Exception as e:
-        print(f"Error fetching routes: {e}")
+        print(f"Error fetching routes from Google Maps: {e}")
         return {}
+
+
+def calculate_emissions(distance_km):
+    """
+    Calculate emissions based on the distance.
+    Assume 120g CO₂ per km for a car.
+    """
+    emission_rate = 0.12  # kg CO₂ per km
+    return distance_km * emission_rate
+
+
+def estimate_arrival_time(duration_seconds):
+    """
+    Estimate arrival time based on the current time and duration.
+    """
+    from datetime import datetime, timedelta
+    current_time = datetime.now()
+    arrival_time = current_time + timedelta(seconds=duration_seconds)
+    return arrival_time.strftime('%I:%M %p')
 
 if __name__ == '__main__':
     app.run(debug=True)
