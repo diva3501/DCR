@@ -26,50 +26,66 @@
     <div id="map"></div>
     <div id="details"></div>
     <script>
-        const getCurrentLocation = () => {
-            return new Promise((resolve, reject) => {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            const { latitude, longitude } = position.coords;
-                            resolve({ lat: latitude, lng: longitude });
-                        },
-                        (error) => {
-                            reject(error);
-                        }
-                    );
-                } else {
-                    reject(new Error("Geolocation is not supported by this browser."));
-                }
-            });
-        };
         const fetchDataAndInitMap = async () => {
             try {
-                const currentLocation = await getCurrentLocation();
-                const response = await fetch(`/delivery-partner?currentLocation=${currentLocation.lat},${currentLocation.lng}`);
+                // Fetch the user's current location dynamically
+                const currentLocation = await new Promise((resolve, reject) => {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                const { latitude, longitude } = position.coords;
+                                resolve(`${latitude},${longitude}`);
+                            },
+                            (error) => reject(error)
+                        );
+                    } else {
+                        reject(new Error("Geolocation not supported by this browser."));
+                    }
+                });
+
+                // Fetch backend data
+                const response = await fetch(`/delivery-partner?currentLocation=${currentLocation}`);
                 const data = await response.json();
 
                 if (!data.route_details) {
-                    alert('No routes available for today.');
+                    alert("No routes available for today.");
                     return;
                 }
+
+                // Initialize Google Map
                 const map = new google.maps.Map(document.getElementById("map"), {
                     zoom: 12,
-                    center: currentLocation,
+                    center: {
+                        lat: data.route_details.markers[0].lat,
+                        lng: data.route_details.markers[0].lng,
+                    },
                 });
 
+                // Draw the route using polyline
                 const routePath = new google.maps.Polyline({
                     path: google.maps.geometry.encoding.decodePath(data.route_details.polyline),
                     geodesic: true,
                     strokeColor: "#FF0000",
                     strokeOpacity: 1.0,
-                    strokeWeight: 2,
+                    strokeWeight: 3,
                 });
                 routePath.setMap(map);
+                const icons = {
+                    start: {
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", // Custom red location icon
+                        scaledSize: new google.maps.Size(40, 40),
+                    },
+                    end: {
+                        url: "https://maps.google.com/mapfiles/ms/icons/green-dot.png", // Custom green location icon
+                        scaledSize: new google.maps.Size(40, 40),
+                    },
+                    intermediate: {
+                        url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png", // Custom blue location icon
+                        scaledSize: new google.maps.Size(40, 40),
+                    },
+                };
 
                 const markers = data.route_details.markers;
-                const markerCount = markers.length;
-
                 markers.forEach((marker, index) => {
                     let markerOptions = {
                         position: { lat: marker.lat, lng: marker.lng },
@@ -77,48 +93,29 @@
                     };
 
                     if (index === 0) {
-                        markerOptions.icon = {
-                            path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: "red",
-                            fillOpacity: 1,
-                            scale: 8,
-                            strokeColor: "white",
-                            labelOrigin: new google.maps.Point(0, -12),
-                        };
-                        markerOptions.label = {
-                            text: "S",
-                            color: "white",
-                            fontSize: "12px",
-                        };
-                    } else if (index === markerCount - 1) {
-                        markerOptions.icon = {
-                            path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: "green",
-                            fillOpacity: 1,
-                            scale: 8,
-                            strokeColor: "white",
-                        };
+                        // Start marker (Red)
+                        markerOptions.icon = icons.start;
+                        markerOptions.label = { text: "S", color: "white", fontSize: "14px" };
+                    } else if (index === markers.length - 1) {
+                        // End marker (Green)
+                        markerOptions.icon = icons.end;
+                        markerOptions.label = { text: "E", color: "white", fontSize: "14px" };
                     } else {
-                        markerOptions.icon = {
-                            path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: "blue",
-                            fillOpacity: 1,
-                            scale: 8,
-                            strokeColor: "white",
-                            labelOrigin: new google.maps.Point(0, -12),
-                        };
+                        // Intermediate markers (Blue with numbering)
+                        markerOptions.icon = icons.intermediate;
                         markerOptions.label = {
-                            text: `${index}`, 
+                            text: `${index}`, // Numbering for intermediate points
                             color: "white",
-                            fontSize: "12px",
+                            fontSize: "14px",
                         };
                     }
 
                     new google.maps.Marker(markerOptions);
                 });
 
+                // Display detailed points and summary
                 const detailsDiv = document.getElementById("details");
-                data.detailed_points.forEach(point => {
+                data.detailed_points.forEach((point) => {
                     detailsDiv.innerHTML += `
                         <div class="card">
                             <p><strong>Product ID:</strong> ${point.productId}</p>
@@ -136,10 +133,11 @@
                         <p><strong>Overall Carbon Emission:</strong> ${data.route_details.overall_carbon_emission} kg</p>
                     </div>`;
             } catch (error) {
-                console.error("Error:", error);
+                console.error("Error fetching data:", error);
                 alert("Unable to fetch route data. Please try again.");
             }
         };
+
         fetchDataAndInitMap();
     </script>
 </body>
