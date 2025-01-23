@@ -3,32 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delivery Partner Page</title>
-    
+    <title>Delivery Route Optimization</title>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
     <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places,geometry" async defer></script>
+
     <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 2.5rem;
+            color: #333;
+        }
         #map {
             height: 500px;
             width: 100%;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
         }
         .card {
-            margin: 15px 0;
-            padding: 15px;
+            margin: 15px auto;
+            padding: 20px;
             border: 1px solid #ddd;
-            border-radius: 5px;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: scale(1.02);
+        }
+        .details-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .route-summary {
+            background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+            color: white;
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .route-summary h3 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        .card p strong {
+            color: #555;
         }
     </style>
 </head>
 <body>
     {% include 'navbar.html' %}
+
     <h1>Delivery Route Optimization</h1>
-    <div id="map"></div>
-    <div id="details"></div>
+
+    <div class="container">
+        <div id="map"></div>
+    </div>
+
+    <div class="details-container">
+        <div id="details"></div>
+    </div>
+
     <script>
         const fetchDataAndInitMap = async () => {
             try {
-                // Fetch the user's current location dynamically
                 const currentLocation = await new Promise((resolve, reject) => {
                     if (navigator.geolocation) {
                         navigator.geolocation.getCurrentPosition(
@@ -43,7 +93,6 @@
                     }
                 });
 
-                // Fetch backend data
                 const response = await fetch(`/delivery-partner?currentLocation=${currentLocation}`);
                 const data = await response.json();
 
@@ -52,7 +101,6 @@
                     return;
                 }
 
-                // Initialize Google Map
                 const map = new google.maps.Map(document.getElementById("map"), {
                     zoom: 12,
                     center: {
@@ -61,59 +109,38 @@
                     },
                 });
 
-                // Draw the route using polyline
                 const routePath = new google.maps.Polyline({
                     path: google.maps.geometry.encoding.decodePath(data.route_details.polyline),
                     geodesic: true,
-                    strokeColor: "#FF0000",
+                    strokeColor: "#007BFF",
                     strokeOpacity: 1.0,
-                    strokeWeight: 3,
+                    strokeWeight: 4,
                 });
                 routePath.setMap(map);
+
                 const icons = {
-                    start: {
-                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", // Custom red location icon
-                        scaledSize: new google.maps.Size(40, 40),
-                    },
-                    end: {
-                        url: "https://maps.google.com/mapfiles/ms/icons/green-dot.png", // Custom green location icon
-                        scaledSize: new google.maps.Size(40, 40),
-                    },
-                    intermediate: {
-                        url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png", // Custom blue location icon
-                        scaledSize: new google.maps.Size(40, 40),
-                    },
+                    start: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", scaledSize: new google.maps.Size(40, 40) },
+                    end: { url: "https://maps.google.com/mapfiles/ms/icons/green-dot.png", scaledSize: new google.maps.Size(40, 40) },
+                    intermediate: { url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png", scaledSize: new google.maps.Size(40, 40) },
                 };
 
                 const markers = data.route_details.markers;
                 markers.forEach((marker, index) => {
-                    let markerOptions = {
+                    const markerOptions = {
                         position: { lat: marker.lat, lng: marker.lng },
                         map,
-                    };
-
-                    if (index === 0) {
-                        // Start marker (Red)
-                        markerOptions.icon = icons.start;
-                        markerOptions.label = { text: "S", color: "white", fontSize: "14px" };
-                    } else if (index === markers.length - 1) {
-                        // End marker (Green)
-                        markerOptions.icon = icons.end;
-                        markerOptions.label = { text: "E", color: "white", fontSize: "14px" };
-                    } else {
-                        // Intermediate markers (Blue with numbering)
-                        markerOptions.icon = icons.intermediate;
-                        markerOptions.label = {
-                            text: `${index}`, // Numbering for intermediate points
+                        icon: index === 0 ? icons.start :
+                            index === markers.length - 1 ? icons.end : icons.intermediate,
+                        label: {
+                            text: index === 0 ? "S" : index === markers.length - 1 ? "E" : `${index}`,
                             color: "white",
                             fontSize: "14px",
-                        };
-                    }
-
+                            fontWeight: "bold",
+                        },
+                    };
                     new google.maps.Marker(markerOptions);
                 });
 
-                // Display detailed points and summary
                 const detailsDiv = document.getElementById("details");
                 data.detailed_points.forEach((point) => {
                     detailsDiv.innerHTML += `
@@ -126,14 +153,14 @@
                 });
 
                 detailsDiv.innerHTML += `
-                    <div class="card">
+                    <div class="route-summary">
                         <h3>Route Summary</h3>
                         <p><strong>Overall Distance:</strong> ${data.route_details.overall_distance} km</p>
                         <p><strong>Overall Time:</strong> ${data.route_details.overall_time} minutes</p>
                         <p><strong>Overall Carbon Emission:</strong> ${data.route_details.overall_carbon_emission} kg</p>
                     </div>`;
             } catch (error) {
-                console.error("Error fetching data:", error);
+                console.error("Error:", error);
                 alert("Unable to fetch route data. Please try again.");
             }
         };
