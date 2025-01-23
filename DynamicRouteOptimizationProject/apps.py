@@ -4,9 +4,19 @@ import math
 from dotenv import load_dotenv
 import os
 import datetime
+import mysql.connector
 
 app = Flask(__name__)
 load_dotenv()
+
+db_config = {
+    'host': 'localhost',
+    'user': 'fedex',
+    'password': 'routeopt',
+    'database': 'routeopt'
+}
+conn = mysql.connector.connect(**db_config)
+cursor = conn.cursor(dictionary=True)
 
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
@@ -265,5 +275,80 @@ def reschedule():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
+@app.route('/client')
+def client():
+    return render_template('client.html', title="Real-Time Delivery Rescheduling System", google_maps_api_key=GOOGLE_MAPS_API_KEY)
+
+
+@app.route('/deliveryPartner')
+def dp():
+    return render_template('DeliveryPartner.html', title="Real-Time Delivery Rescheduling System", google_maps_api_key=GOOGLE_MAPS_API_KEY)
+
+@app.route('/place_order', methods=['POST'])
+def place_order():
+    data = request.json
+    productId = data['productId']
+    deliveryDate = data['deliveryDate']
+    deliveryLocation = data['deliveryLocation']
+
+    cursor.execute(
+        "INSERT INTO ClientOrders (productId, deliveryDate, deliveryLocation) VALUES (%s, %s, %s)",
+        (productId, deliveryDate, deliveryLocation)
+    )
+    conn.commit()
+    return jsonify({"message": "Order placed successfully!"})
+
+# Endpoint to reschedule an order
+@app.route('/reschedule_order', methods=['POST'])
+def reschedule_order():
+    data = request.json
+    orderId = data['orderId']
+    newDate = data['newDate']
+
+    cursor.execute(
+        "UPDATE ClientOrders SET deliveryDate = %s WHERE orderId = %s",
+        (newDate, orderId)
+    )
+    conn.commit()
+    return jsonify({"message": "Order rescheduled successfully!"})
+
+# Endpoint to get delivery partner routes
+@app.route('/get_routes/<date>', methods=['GET'])
+def get_routes_by_date(date):
+    cursor.execute("SELECT * FROM ClientOrders WHERE deliveryDate = %s", (date,))
+    orders = cursor.fetchall()
+    
+    if not orders:
+        return jsonify({"message": "No deliveries for this date."})
+
+    # Build route using Google Maps API
+    waypoints = "|".join([order['deliveryLocation'] for order in orders])
+    origin = orders[0]['deliveryLocation']
+    destination = orders[-1]['deliveryLocation']
+
+    url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={destination}&waypoints={waypoints}&key={GOOGLE_MAPS_API_KEY}"
+    response = requests.get(url).json()
+
+    # Extract route details
+    route = response['routes'][0]
+    polyline = route['overview_polyline']['points']
+    total_distance = sum([leg['distance']['value'] for leg in route['legs']]) / 1000  # in km
+    total_time = sum([leg['duration']['value'] for leg in route['legs']]) / 60  # in minutes
+    carbon_emission = total_distance * 0.12  # Example: 0.12 kg CO2 per km
+
+    # Save route to DB
+    cursor.execute(
+        "INSERT INTO DeliveryRoutes (deliveryDate, routeDetails, carbonEmission, totalDistance, totalTime) VALUES (%s, %s, %s, %s, %s)",
+        (date, response, carbon_emission, total_distance, total_time)
+    )
+    conn.commit()
+
+    return jsonify({
+        "polyline": polyline,
+        "total_distance": total_distance,
+        "total_time": total_time,
+        "carbon_emission": carbon_emission
+    })
 if __name__ == '__main__':
     app.run(debug=True)

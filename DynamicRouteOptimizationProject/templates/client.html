@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Page</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places,geometry" async defer></script>
+    <style>
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+        }
+        .form-section {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container mt-4">
+        <h1 class="text-center">Client Page</h1>
+
+        <!-- Place Order Section -->
+        <div class="form-section">
+            <h2>Place Order</h2>
+            <form id="orderForm" class="needs-validation" novalidate>
+                <div class="mb-3">
+                    <label for="productId" class="form-label">Product ID</label>
+                    <input type="text" class="form-control" id="productId" required>
+                </div>
+                <div class="mb-3">
+                    <label for="deliveryDate" class="form-label">Delivery Date</label>
+                    <input type="date" class="form-control" id="deliveryDate" required>
+                </div>
+                <div class="mb-3">
+                    <label for="deliveryLocation" class="form-label">Delivery Location</label>
+                    <input type="text" class="form-control" id="deliveryLocation" placeholder="Search location" required>
+                </div>
+                <div id="map"></div>
+                <button type="submit" class="btn btn-primary mt-3">Place Order</button>
+            </form>
+        </div>
+
+        <!-- Reschedule Order Section -->
+        <div class="form-section">
+            <h2>Reschedule Order</h2>
+            <form id="rescheduleForm" class="needs-validation" novalidate>
+                <div class="mb-3">
+                    <label for="orderId" class="form-label">Order ID</label>
+                    <input type="text" class="form-control" id="orderId" required>
+                </div>
+                <div class="mb-3">
+                    <label for="newDate" class="form-label">New Delivery Date</label>
+                    <input type="date" class="form-control" id="newDate" required>
+                </div>
+                <button type="submit" class="btn btn-secondary">Reschedule Order</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let marker;
+        let selectedLocation = "";
+
+        // Initialize Google Map
+        function initMap() {
+            // Use the client's current location as the map's center
+            navigator.geolocation.getCurrentPosition((position) => {
+                const { latitude, longitude } = position.coords;
+                const userLocation = { lat: latitude, lng: longitude };
+
+                // Create map centered on user's location
+                map = new google.maps.Map(document.getElementById("map"), {
+                    center: userLocation,
+                    zoom: 12,
+                });
+
+                // Add a search box
+                const input = document.getElementById("deliveryLocation");
+                const searchBox = new google.maps.places.SearchBox(input);
+                map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+                // Update map when user selects a location
+                searchBox.addListener("places_changed", () => {
+                    const places = searchBox.getPlaces();
+                    if (places.length === 0) return;
+
+                    const place = places[0];
+                    const location = place.geometry.location;
+
+                    // Update marker and map center
+                    if (marker) marker.setMap(null);
+                    marker = new google.maps.Marker({
+                        position: location,
+                        map: map,
+                        title: place.name,
+                        icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+                    });
+
+                    map.setCenter(location);
+                    selectedLocation = `${location.lat()},${location.lng()}`;
+                });
+
+                // Add marker when user clicks on the map
+                map.addListener("click", (e) => {
+                    if (marker) marker.setMap(null);
+                    marker = new google.maps.Marker({
+                        position: e.latLng,
+                        map: map,
+                        title: "Selected Delivery Location",
+                        icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+                    });
+                    selectedLocation = `${e.latLng.lat()},${e.latLng.lng()}`;
+                });
+            });
+        }
+
+        // Handle Place Order form submission
+        document.getElementById("orderForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const response = await fetch("/place_order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    productId: document.getElementById("productId").value,
+                    deliveryDate: document.getElementById("deliveryDate").value,
+                    deliveryLocation: selectedLocation || document.getElementById("deliveryLocation").value,
+                }),
+            });
+            const result = await response.json();
+            alert(result.message);
+        });
+
+        // Handle Reschedule Order form submission
+        document.getElementById("rescheduleForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const response = await fetch("/reschedule_order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    orderId: document.getElementById("orderId").value,
+                    newDate: document.getElementById("newDate").value,
+                }),
+            });
+            const result = await response.json();
+            alert(result.message);
+        });
+
+        // Load the map
+        window.onload = initMap;
+    </script>
+</body>
+</html>
