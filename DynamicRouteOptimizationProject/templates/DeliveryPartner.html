@@ -25,9 +25,7 @@
     <h1>Delivery Route Optimization</h1>
     <div id="map"></div>
     <div id="details"></div>
-
     <script>
-        // Function to fetch current location using Geolocation API
         const getCurrentLocation = () => {
             return new Promise((resolve, reject) => {
                 if (navigator.geolocation) {
@@ -45,14 +43,9 @@
                 }
             });
         };
-
-        // Fetch data and initialize the map
         const fetchDataAndInitMap = async () => {
             try {
-                // Get current location
                 const currentLocation = await getCurrentLocation();
-
-                // Fetch data from the backend
                 const response = await fetch(`/delivery-partner?currentLocation=${currentLocation.lat},${currentLocation.lng}`);
                 const data = await response.json();
 
@@ -60,14 +53,11 @@
                     alert('No routes available for today.');
                     return;
                 }
-
-                // Initialize the map
                 const map = new google.maps.Map(document.getElementById("map"), {
                     zoom: 12,
                     center: currentLocation,
                 });
 
-                // Polyline
                 const routePath = new google.maps.Polyline({
                     path: google.maps.geometry.encoding.decodePath(data.route_details.polyline),
                     geodesic: true,
@@ -77,16 +67,56 @@
                 });
                 routePath.setMap(map);
 
-                // Markers
-                data.route_details.markers.forEach((marker, index) => {
-                    new google.maps.Marker({
+                const markers = data.route_details.markers;
+                const markerCount = markers.length;
+
+                markers.forEach((marker, index) => {
+                    let markerOptions = {
                         position: { lat: marker.lat, lng: marker.lng },
                         map,
-                        label: `${index + 1}`,
-                    });
+                    };
+
+                    if (index === 0) {
+                        markerOptions.icon = {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            fillColor: "red",
+                            fillOpacity: 1,
+                            scale: 8,
+                            strokeColor: "white",
+                            labelOrigin: new google.maps.Point(0, -12),
+                        };
+                        markerOptions.label = {
+                            text: "S",
+                            color: "white",
+                            fontSize: "12px",
+                        };
+                    } else if (index === markerCount - 1) {
+                        markerOptions.icon = {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            fillColor: "green",
+                            fillOpacity: 1,
+                            scale: 8,
+                            strokeColor: "white",
+                        };
+                    } else {
+                        markerOptions.icon = {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            fillColor: "blue",
+                            fillOpacity: 1,
+                            scale: 8,
+                            strokeColor: "white",
+                            labelOrigin: new google.maps.Point(0, -12),
+                        };
+                        markerOptions.label = {
+                            text: `${index}`, 
+                            color: "white",
+                            fontSize: "12px",
+                        };
+                    }
+
+                    new google.maps.Marker(markerOptions);
                 });
 
-                // Route Details
                 const detailsDiv = document.getElementById("details");
                 data.detailed_points.forEach(point => {
                     detailsDiv.innerHTML += `
@@ -110,8 +140,6 @@
                 alert("Unable to fetch route data. Please try again.");
             }
         };
-
-        // Initialize map after fetching current location and backend data
         fetchDataAndInitMap();
     </script>
 </body>
