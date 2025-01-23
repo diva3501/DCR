@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Partner Page</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places,geometry" async defer></script>
+        <style>
+            #map {
+                height: 60vh; /* Reduced height */
+                width: 80vw; /* Reduced width */
+                border: 2px solid #ddd; /* Border around the map for a clean look */
+            }
+            .card {
+                margin-bottom: 10px;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                background-color: #f9f9f9;
+            }
+            .card-title {
+                font-size: 18px;
+                font-weight: bold;
+            }
+            .card-body {
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        {% include 'navbar.html' %}
+    
+        <h1>Delivery Routes for Today</h1>
+    
+        <div id="map"></div>
+    
+        <div id="routeDetails" style="margin-top: 20px;">
+            <h2>Route Summary</h2>
+            <div class="card">
+                <div class="card-body">
+                    <p class="card-title">Overall Distance: <span id="overallDistance"></span> km</p>
+                    <p class="card-title">Overall Time: <span id="overallTime"></span> minutes</p>
+                    <p class="card-title">Overall Carbon Emission: <span id="overallCarbonEmission"></span> kg</p>
+                </div>
+            </div>
+        </div>
+    
+        <script>
+            async function fetchRoutes() {
+                try {
+                    const response = await fetch("/get_today_routes");
+                    const result = await response.json();
+    
+                    const routes = result.routes;
+                    const map = new google.maps.Map(document.getElementById('map'), {
+                        center: { lat: 0, lng: 0 }, // Center map to global center
+                        zoom: 12
+                    });
+    
+                    let routeCoordinates = [];
+                    let startPoint = null;
+    
+                    routes.forEach(route => {
+                        let coordinates = route.deliveryLocation.split(',');
+                        let lat = parseFloat(coordinates[0].trim());
+                        let lng = parseFloat(coordinates[1].trim());
+    
+                        if (!startPoint) {
+                            startPoint = { lat, lng };
+                        }
+    
+                        // Markers for start point, delivery locations, and final location
+                        let marker = new google.maps.Marker({
+                            position: { lat, lng },
+                            map,
+                            title: route.productId,
+                            icon: route.finalDelivery ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png' :
+                                   (startPoint ? 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' : 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png')
+                        });
+    
+                        routeCoordinates.push({ lat, lng });
+                    });
+    
+                    if (routeCoordinates.length > 1 && startPoint) {
+                        // Adding polyline for the route
+                        new google.maps.Polyline({
+                            path: routeCoordinates,
+                            map: map,
+                            strokeColor: '#FF0000',
+                            strokeOpacity: 0.8,
+                            strokeWeight: 2
+                        });
+    
+                        // Center map to the route
+                        map.setCenter(startPoint);
+                        map.setZoom(14); // Zoom to route area
+                    }
+    
+                    document.getElementById("overallDistance").innerText = result.overallDistance;
+                    document.getElementById("overallTime").innerText = result.overallTime;
+                    document.getElementById("overallCarbonEmission").innerText = result.overallCarbonEmission;
+    
+                } catch (error) {
+                    console.error(error);
+                    alert("An error occurred while fetching routes.");
+                }
+            }
+    
+            fetchRoutes();
+        </script>
+    </body>
+    </html>
+    

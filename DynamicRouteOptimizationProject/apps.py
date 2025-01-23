@@ -4,9 +4,19 @@ import math
 from dotenv import load_dotenv
 import os
 import datetime
+import mysql.connector
 
 app = Flask(__name__)
 load_dotenv()
+
+db_config = {
+    'host': 'localhost',
+    'user': 'fedex',
+    'password': 'routeopt',
+    'database': 'routeopt'
+}
+conn = mysql.connector.connect(**db_config)
+cursor = conn.cursor(dictionary=True)
 
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
@@ -301,5 +311,133 @@ def reschedule():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
+@app.route('/client')
+def client():
+    return render_template('client.html', title="Real-Time Delivery Rescheduling System", google_maps_api_key=GOOGLE_MAPS_API_KEY)
+
+
+@app.route('/deliveryPartner')
+def dp():
+    return render_template('DeliveryPartner.html', title="Real-Time Delivery Rescheduling System", google_maps_api_key=GOOGLE_MAPS_API_KEY)
+
+@app.route('/place_order', methods=['POST'])
+def place_order():
+    data = request.json
+    productId = data['productId']
+    deliveryDate = data['deliveryDate']
+    deliveryLocation = data['deliveryLocation']
+
+    cursor.execute(
+        "INSERT INTO ClientOrders (productId, deliveryDate, deliveryLocation) VALUES (%s, %s, %s)",
+        (productId, deliveryDate, deliveryLocation)
+    )
+    conn.commit()
+    return jsonify({"message": "Order placed successfully!"})
+
+# Endpoint to reschedule an order
+@app.route('/reschedule_order', methods=['POST'])
+def reschedule_order():
+    data = request.get_json()
+    order_id = data.get('orderId')
+    new_date = data.get('newDate')
+
+    # Validate input
+    if not order_id or not new_date:
+        return jsonify({'message': 'Order ID and New Date are required'}), 400
+
+    try:
+        # Connect to database
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        # Check if the order ID exists
+        query_check = "SELECT * FROM clientOrders WHERE productId = %s"
+        cursor.execute(query_check, (order_id,))
+        order = cursor.fetchone()
+
+        if not order:
+            return jsonify({'message': f'Product ID {order_id} does not exist'}), 404
+
+        # Update the delivery date
+        query_update = "UPDATE clientOrders SET deliveryDate = %s WHERE productId = %s"
+        cursor.execute(query_update, (new_date, order_id))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({'message': f'Delivery date updated successfully for Product ID {order_id}'}), 200
+
+    except mysql.connector.Error as err:
+        return jsonify({'message': f'Database error: {err}'}), 500
+
+    except Exception as e:
+        return jsonify({'message': f'An unexpected error occurred: {str(e)}'}), 500
+
+# Endpoint to get delivery partner routes
+@app.route('/get_today_routes', methods=['GET'])
+def get_today_routes():
+    try:
+        # Connect to database
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        # Get today's date
+        today = datetime.date.today()
+        query = "SELECT productId, deliveryLocation FROM clientOrders WHERE deliveryDate = %s"
+        cursor.execute(query, (today,))
+        routes = cursor.fetchall()
+
+        # Fetching current location as start point
+        # This will use geolocation or any other method to get the current location.
+        start_point = 'CURRENT_LOCATION'  # Replace with actual method to fetch current location
+
+        route_details = []
+        for route in routes:
+            product_id = route['productId']
+            delivery_location = route['deliveryLocation']
+
+            # Assuming you have a function to calculate distance and time
+            distance, estimated_time, carbon_emission = calculate_route_details(start_point, delivery_location)
+
+            route_details.append({
+                'productId': product_id,
+                'deliveryLocation': delivery_location,
+                'distance': distance,
+                'estimatedTime': estimated_time,
+                'carbonEmission': carbon_emission
+            })
+
+        # Overall route details
+        overall_distance = sum([r['distance'] for r in route_details])
+        overall_time = sum([r['estimatedTime'] for r in route_details])
+        overall_carbon_emission = sum([r['carbonEmission'] for r in route_details])
+
+        response = {
+            'routes': route_details,
+            'overallDistance': overall_distance,
+            'overallTime': overall_time,
+            'overallCarbonEmission': overall_carbon_emission
+        }
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(response), 200
+
+    except mysql.connector.Error as err:
+        return jsonify({'message': f'Database error: {err}'}), 500
+
+    except Exception as e:
+        return jsonify({'message': f'An unexpected error occurred: {str(e)}'}), 500
+
+def calculate_route_details(start, end):
+    # Function to calculate distance, estimated time, and carbon emission
+    # This is a placeholder function; you'll need to integrate actual route optimization logic
+    distance = 10  # Example distance
+    estimated_time = 20  # Example time
+    carbon_emission = 5  # Example emission
+    return distance, estimated_time, carbon_emission
 if __name__ == '__main__':
     app.run(debug=True)
