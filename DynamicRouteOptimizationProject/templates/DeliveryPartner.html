@@ -7,109 +7,112 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places,geometry" async defer></script>
-        <style>
-            #map {
-                height: 60vh; /* Reduced height */
-                width: 80vw; /* Reduced width */
-                border: 2px solid #ddd; /* Border around the map for a clean look */
-            }
-            .card {
-                margin-bottom: 10px;
-                padding: 10px;
-                border: 1px solid #ccc;
-                border-radius: 5px;
-                background-color: #f9f9f9;
-            }
-            .card-title {
-                font-size: 18px;
-                font-weight: bold;
-            }
-            .card-body {
-                font-size: 14px;
-            }
-        </style>
-    </head>
-    <body>
-        {% include 'navbar.html' %}
-    
-        <h1>Delivery Routes for Today</h1>
-    
-        <div id="map"></div>
-    
-        <div id="routeDetails" style="margin-top: 20px;">
-            <h2>Route Summary</h2>
-            <div class="card">
-                <div class="card-body">
-                    <p class="card-title">Overall Distance: <span id="overallDistance"></span> km</p>
-                    <p class="card-title">Overall Time: <span id="overallTime"></span> minutes</p>
-                    <p class="card-title">Overall Carbon Emission: <span id="overallCarbonEmission"></span> kg</p>
-                </div>
-            </div>
-        </div>
-    
-        <script>
-            async function fetchRoutes() {
-                try {
-                    const response = await fetch("/get_today_routes");
-                    const result = await response.json();
-    
-                    const routes = result.routes;
-                    const map = new google.maps.Map(document.getElementById('map'), {
-                        center: { lat: 0, lng: 0 }, // Center map to global center
-                        zoom: 12
-                    });
-    
-                    let routeCoordinates = [];
-                    let startPoint = null;
-    
-                    routes.forEach(route => {
-                        let coordinates = route.deliveryLocation.split(',');
-                        let lat = parseFloat(coordinates[0].trim());
-                        let lng = parseFloat(coordinates[1].trim());
-    
-                        if (!startPoint) {
-                            startPoint = { lat, lng };
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+        .card {
+            margin: 15px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <h1>Delivery Route Optimization</h1>
+    <div id="map"></div>
+    <div id="details"></div>
+
+    <script>
+        // Function to fetch current location using Geolocation API
+        const getCurrentLocation = () => {
+            return new Promise((resolve, reject) => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            const { latitude, longitude } = position.coords;
+                            resolve({ lat: latitude, lng: longitude });
+                        },
+                        (error) => {
+                            reject(error);
                         }
-    
-                        // Markers for start point, delivery locations, and final location
-                        let marker = new google.maps.Marker({
-                            position: { lat, lng },
-                            map,
-                            title: route.productId,
-                            icon: route.finalDelivery ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png' :
-                                   (startPoint ? 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' : 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png')
-                        });
-    
-                        routeCoordinates.push({ lat, lng });
-                    });
-    
-                    if (routeCoordinates.length > 1 && startPoint) {
-                        // Adding polyline for the route
-                        new google.maps.Polyline({
-                            path: routeCoordinates,
-                            map: map,
-                            strokeColor: '#FF0000',
-                            strokeOpacity: 0.8,
-                            strokeWeight: 2
-                        });
-    
-                        // Center map to the route
-                        map.setCenter(startPoint);
-                        map.setZoom(14); // Zoom to route area
-                    }
-    
-                    document.getElementById("overallDistance").innerText = result.overallDistance;
-                    document.getElementById("overallTime").innerText = result.overallTime;
-                    document.getElementById("overallCarbonEmission").innerText = result.overallCarbonEmission;
-    
-                } catch (error) {
-                    console.error(error);
-                    alert("An error occurred while fetching routes.");
+                    );
+                } else {
+                    reject(new Error("Geolocation is not supported by this browser."));
                 }
+            });
+        };
+
+        // Fetch data and initialize the map
+        const fetchDataAndInitMap = async () => {
+            try {
+                // Get current location
+                const currentLocation = await getCurrentLocation();
+
+                // Fetch data from the backend
+                const response = await fetch(`/delivery-partner?currentLocation=${currentLocation.lat},${currentLocation.lng}`);
+                const data = await response.json();
+
+                if (!data.route_details) {
+                    alert('No routes available for today.');
+                    return;
+                }
+
+                // Initialize the map
+                const map = new google.maps.Map(document.getElementById("map"), {
+                    zoom: 12,
+                    center: currentLocation,
+                });
+
+                // Polyline
+                const routePath = new google.maps.Polyline({
+                    path: google.maps.geometry.encoding.decodePath(data.route_details.polyline),
+                    geodesic: true,
+                    strokeColor: "#FF0000",
+                    strokeOpacity: 1.0,
+                    strokeWeight: 2,
+                });
+                routePath.setMap(map);
+
+                // Markers
+                data.route_details.markers.forEach((marker, index) => {
+                    new google.maps.Marker({
+                        position: { lat: marker.lat, lng: marker.lng },
+                        map,
+                        label: `${index + 1}`,
+                    });
+                });
+
+                // Route Details
+                const detailsDiv = document.getElementById("details");
+                data.detailed_points.forEach(point => {
+                    detailsDiv.innerHTML += `
+                        <div class="card">
+                            <p><strong>Product ID:</strong> ${point.productId}</p>
+                            <p><strong>Estimated Time to Reach:</strong> ${point.estimated_time_reach}</p>
+                            <p><strong>Distance from Origin:</strong> ${point.distance_from_origin}</p>
+                            <p><strong>Location:</strong> ${point.location}</p>
+                        </div>`;
+                });
+
+                detailsDiv.innerHTML += `
+                    <div class="card">
+                        <h3>Route Summary</h3>
+                        <p><strong>Overall Distance:</strong> ${data.route_details.overall_distance} km</p>
+                        <p><strong>Overall Time:</strong> ${data.route_details.overall_time} minutes</p>
+                        <p><strong>Overall Carbon Emission:</strong> ${data.route_details.overall_carbon_emission} kg</p>
+                    </div>`;
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Unable to fetch route data. Please try again.");
             }
-    
-            fetchRoutes();
-        </script>
-    </body>
-    </html>
-    
+        };
+
+        // Initialize map after fetching current location and backend data
+        fetchDataAndInitMap();
+    </script>
+</body>
+</html>

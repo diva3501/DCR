@@ -4,7 +4,9 @@ import math
 from dotenv import load_dotenv
 import os
 import datetime
+from datetime import date
 import mysql.connector
+import googlemaps
 
 app = Flask(__name__)
 load_dotenv()
@@ -21,6 +23,7 @@ cursor = conn.cursor(dictionary=True)
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
 AQICN_API_KEY = os.getenv('AQICN_API_KEY')
+gmaps = googlemaps.Client(key=GOOGLE_MAPS_API_KEY)
 
 EMISSION_FACTOR = 0.12  
 
@@ -398,5 +401,63 @@ def calculate_route_details(start, end):
     estimated_time = 20  # Example time
     carbon_emission = 5  # Example emission
     return distance, estimated_time, carbon_emission
+
+@app.route('/delivery-partner', methods=['GET'])
+def delivery_partner():
+    today = date.today().isoformat()
+    
+    # Connect to the database
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor(dictionary=True)
+    
+    # Fetch all orders for today's date
+    query = "SELECT * FROM clientorders WHERE deliveryDate = %s"
+    cursor.execute(query, (today,))
+    orders = cursor.fetchall()
+    conn.close()
+    
+    if not orders:
+        return jsonify({'message': 'No orders found for today'}), 404
+    
+    delivery_locations = [order['deliveryLocation'] for order in orders]
+    
+    # Fetch start point (current location) from the frontend
+    current_location = request.args.get('currentLocation', '13.0827,80.2707')  # Default to Chennai if not provided
+    current_lat, current_lng = map(float, current_location.split(','))
+    
+    # Calculate the best route using Google Maps API
+    waypoints = delivery_locations
+    directions_result = gmaps.directions(
+        origin=current_location,
+        destination=waypoints[-1],
+        waypoints=waypoints[:-1],
+        optimize_waypoints=True
+    )
+    
+    # Parse the directions result
+    route = directions_result[0]
+    overview_polyline = route['overview_polyline']['points']
+    legs = route['legs']
+    
+    route_details = {
+        'overall_distance': sum(leg['distance']['value'] for leg in legs) / 1000,  # in kilometers
+        'overall_time': sum(leg['duration']['value'] for leg in legs) / 60,  # in minutes
+        'overall_carbon_emission': round(0.120 * (sum(leg['distance']['value'] for leg in legs) / 1000), 2),  # Approximation
+        'polyline': overview_polyline,
+        'markers': [{'lat': leg['start_location']['lat'], 'lng': leg['start_location']['lng']} for leg in legs]
+    }
+    
+    detailed_points = []
+    for i, order in enumerate(orders):
+        leg = legs[i]
+        detailed_points.append({
+            'productId': order['productId'],
+            'estimated_time_reach': leg['duration']['text'],
+            'distance_from_origin': leg['distance']['text'],
+            'location': order['deliveryLocation']
+        })
+    
+    return jsonify({'route_details': route_details, 'detailed_points': detailed_points})
+
 if __name__ == '__main__':
     app.run(debug=True)
