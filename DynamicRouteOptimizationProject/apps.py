@@ -335,41 +335,68 @@ def reschedule_order():
         return jsonify({'message': f'An unexpected error occurred: {str(e)}'}), 500
 
 # Endpoint to get delivery partner routes
-@app.route('/get_routes/<date>', methods=['GET'])
-def get_routes_by_date(date):
-    cursor.execute("SELECT * FROM ClientOrders WHERE deliveryDate = %s", (date,))
-    orders = cursor.fetchall()
-    
-    if not orders:
-        return jsonify({"message": "No deliveries for this date."})
+@app.route('/get_today_routes', methods=['GET'])
+def get_today_routes():
+    try:
+        # Connect to database
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
 
-    # Build route using Google Maps API
-    waypoints = "|".join([order['deliveryLocation'] for order in orders])
-    origin = orders[0]['deliveryLocation']
-    destination = orders[-1]['deliveryLocation']
+        # Get today's date
+        today = datetime.date.today()
+        query = "SELECT productId, deliveryLocation FROM clientOrders WHERE deliveryDate = %s"
+        cursor.execute(query, (today,))
+        routes = cursor.fetchall()
 
-    url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={destination}&waypoints={waypoints}&key={GOOGLE_MAPS_API_KEY}"
-    response = requests.get(url).json()
+        # Fetching current location as start point
+        # This will use geolocation or any other method to get the current location.
+        start_point = 'CURRENT_LOCATION'  # Replace with actual method to fetch current location
 
-    # Extract route details
-    route = response['routes'][0]
-    polyline = route['overview_polyline']['points']
-    total_distance = sum([leg['distance']['value'] for leg in route['legs']]) / 1000  # in km
-    total_time = sum([leg['duration']['value'] for leg in route['legs']]) / 60  # in minutes
-    carbon_emission = total_distance * 0.12  # Example: 0.12 kg CO2 per km
+        route_details = []
+        for route in routes:
+            product_id = route['productId']
+            delivery_location = route['deliveryLocation']
 
-    # Save route to DB
-    cursor.execute(
-        "INSERT INTO DeliveryRoutes (deliveryDate, routeDetails, carbonEmission, totalDistance, totalTime) VALUES (%s, %s, %s, %s, %s)",
-        (date, response, carbon_emission, total_distance, total_time)
-    )
-    conn.commit()
+            # Assuming you have a function to calculate distance and time
+            distance, estimated_time, carbon_emission = calculate_route_details(start_point, delivery_location)
 
-    return jsonify({
-        "polyline": polyline,
-        "total_distance": total_distance,
-        "total_time": total_time,
-        "carbon_emission": carbon_emission
-    })
+            route_details.append({
+                'productId': product_id,
+                'deliveryLocation': delivery_location,
+                'distance': distance,
+                'estimatedTime': estimated_time,
+                'carbonEmission': carbon_emission
+            })
+
+        # Overall route details
+        overall_distance = sum([r['distance'] for r in route_details])
+        overall_time = sum([r['estimatedTime'] for r in route_details])
+        overall_carbon_emission = sum([r['carbonEmission'] for r in route_details])
+
+        response = {
+            'routes': route_details,
+            'overallDistance': overall_distance,
+            'overallTime': overall_time,
+            'overallCarbonEmission': overall_carbon_emission
+        }
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(response), 200
+
+    except mysql.connector.Error as err:
+        return jsonify({'message': f'Database error: {err}'}), 500
+
+    except Exception as e:
+        return jsonify({'message': f'An unexpected error occurred: {str(e)}'}), 500
+
+def calculate_route_details(start, end):
+    # Function to calculate distance, estimated time, and carbon emission
+    # This is a placeholder function; you'll need to integrate actual route optimization logic
+    distance = 10  # Example distance
+    estimated_time = 20  # Example time
+    carbon_emission = 5  # Example emission
+    return distance, estimated_time, carbon_emission
 if __name__ == '__main__':
     app.run(debug=True)
