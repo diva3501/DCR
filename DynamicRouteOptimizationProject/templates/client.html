@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,52 +13,84 @@
             width: 100%;
             margin-top: 10px;
             border: 1px solid #ccc;
+            border-radius: 8px;
         }
+
         .form-section {
             margin-bottom: 30px;
         }
+
+        .card {
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary, .btn-secondary {
+            border-radius: 25px;
+        }
+
+        h1 {
+            color: #343a40;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        h2 {
+            color: #495057;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
+
 <body>
     {% include 'navbar.html' %}
-    <div class="container mt-4">
-        <h1 class="text-center">Client Page</h1>
 
-        <!-- Place Order Section -->
-        <div class="form-section">
-            <h2>Place Order</h2>
-            <form id="orderForm" class="needs-validation" novalidate>
-                <div class="mb-3">
-                    <label for="productId" class="form-label">Product ID</label>
-                    <input type="text" class="form-control" id="productId" required>
-                </div>
-                <div class="mb-3">
-                    <label for="deliveryDate" class="form-label">Delivery Date</label>
-                    <input type="date" class="form-control" id="deliveryDate" required>
-                </div>
-                <div class="mb-3">
-                    <label for="deliveryLocation" class="form-label">Delivery Location</label>
-                    <input type="text" class="form-control" id="deliveryLocation" placeholder="Search location" required>
-                </div>
-                <div id="map"></div>
-                <button type="submit" class="btn btn-primary mt-3">Place Order</button>
-            </form>
+    <div class="container mt-5">
+        <div class="text-center mb-4">
+            <h1>Client Dashboard</h1>
         </div>
 
-        <!-- Reschedule Order Section -->
-        <div class="form-section">
-            <h2>Reschedule Order</h2>
-            <form id="rescheduleForm" class="needs-validation" novalidate>
-                <div class="mb-3">
-                    <label for="orderId" class="form-label">Order ID</label>
-                    <input type="text" class="form-control" id="orderId" required>
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card p-4">
+                    <h2>Place Order</h2>
+                    <form id="orderForm" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="productId" class="form-label">Product ID</label>
+                            <input type="text" class="form-control" id="productId" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="deliveryDate" class="form-label">Delivery Date</label>
+                            <input type="date" class="form-control" id="deliveryDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="deliveryLocation" class="form-label">Delivery Location</label>
+                            <input type="text" class="form-control" id="deliveryLocation" placeholder="Search location" required>
+                        </div>
+                        <div id="map"></div>
+                        <button type="submit" class="btn btn-primary mt-3 w-100">Place Order</button>
+                    </form>
                 </div>
-                <div class="mb-3">
-                    <label for="newDate" class="form-label">New Delivery Date</label>
-                    <input type="date" class="form-control" id="newDate" required>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card p-4">
+                    <h2>Reschedule Order</h2>
+                    <form id="rescheduleForm" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="orderId" class="form-label">Order ID</label>
+                            <input type="text" class="form-control" id="orderId" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newDate" class="form-label">New Delivery Date</label>
+                            <input type="date" class="form-control" id="newDate" required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary mt-3 w-100">Reschedule Order</button>
+                    </form>
                 </div>
-                <button type="submit" class="btn btn-secondary">Reschedule Order</button>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -66,25 +99,20 @@
         let marker;
         let selectedLocation = "";
 
-        // Initialize Google Map
         function initMap() {
-            // Use the client's current location as the map's center
             navigator.geolocation.getCurrentPosition((position) => {
                 const { latitude, longitude } = position.coords;
                 const userLocation = { lat: latitude, lng: longitude };
 
-                // Create map centered on user's location
                 map = new google.maps.Map(document.getElementById("map"), {
                     center: userLocation,
                     zoom: 12,
                 });
 
-                // Add a search box
                 const input = document.getElementById("deliveryLocation");
                 const searchBox = new google.maps.places.SearchBox(input);
                 map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
 
-                // Update map when user selects a location
                 searchBox.addListener("places_changed", () => {
                     const places = searchBox.getPlaces();
                     if (places.length === 0) return;
@@ -92,7 +120,6 @@
                     const place = places[0];
                     const location = place.geometry.location;
 
-                    // Update marker and map center
                     if (marker) marker.setMap(null);
                     marker = new google.maps.Marker({
                         position: location,
@@ -105,7 +132,6 @@
                     selectedLocation = `${location.lat()},${location.lng()}`;
                 });
 
-                // Add marker when user clicks on the map
                 map.addListener("click", (e) => {
                     if (marker) marker.setMap(null);
                     marker = new google.maps.Marker({
@@ -119,7 +145,6 @@
             });
         }
 
-        // Handle Place Order form submission
         document.getElementById("orderForm").addEventListener("submit", async (e) => {
             e.preventDefault();
             const response = await fetch("/place_order", {
@@ -135,35 +160,32 @@
             alert(result.message);
         });
 
-        // Handle Reschedule Order form submission
         document.getElementById("rescheduleForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
+            e.preventDefault();
+            try {
+                const response = await fetch("/reschedule_order", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        orderId: document.getElementById("orderId").value,
+                        newDate: document.getElementById("newDate").value,
+                    }),
+                });
 
-        try {
-            const response = await fetch("/reschedule_order", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    orderId: document.getElementById("orderId").value,
-                    newDate: document.getElementById("newDate").value,
-                }),
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                alert(result.message); // Success message
-            } else {
-                alert(`Error: ${result.message}`); // Show error from backend
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message);
+                } else {
+                    alert(`Error: ${result.message}`);
+                }
+            } catch (error) {
+                alert("An error occurred while rescheduling. Please try again.");
+                console.error(error);
             }
-        } catch (error) {
-            alert("An error occurred while rescheduling. Please try again.");
-            console.error(error);
-        }
-    });
+        });
 
-        // Load the map
         window.onload = initMap;
     </script>
 </body>
+
 </html>
