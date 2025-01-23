@@ -42,37 +42,78 @@ def get_routes():
     data = request.json
     start_coords = data['start_coords']
     end_coords = data['end_coords']
+    mode = data.get('mode')  
+    fuel_type = data.get('fuel_type') 
+    enable_traffic = data.get('enableTraffic') 
 
     directions_url = f"https://maps.googleapis.com/maps/api/directions/json"
+
+    driving_options = None
+    if enable_traffic:
+        driving_options = {
+            'departureTime': 'now',
+            'trafficModel': 'best_guess'
+        }
+
     params = {
         'origin': start_coords,
         'destination': end_coords,
         'alternatives': 'true',
-        'key': GOOGLE_MAPS_API_KEY
+        'key': GOOGLE_MAPS_API_KEY,
+        'mode': mode,
+        'drivingOptions': driving_options,
     }
+    
     response = requests.get(directions_url, params=params)
     routes = response.json().get('routes', [])
 
     routes = sorted(routes, key=lambda x: (
         x['legs'][0]['distance']['value'],  
         x['legs'][0]['duration']['value'],  
-        calculate_emissions(x['legs'][0]['distance']['value'] / 1000)  
+        calculateemissions(x['legs'][0]['distance']['value'] / 1000, mode, fuel_type)  
     ))
 
     route_details = []
     for index, route in enumerate(routes[:3]):
-        distance = route['legs'][0]['distance']['value'] / 1000 
+        distance = route['legs'][0]['distance']['value'] / 1000  
         duration = route['legs'][0]['duration']['text']
-        emissions = calculate_emissions(distance)
+        emissions = calculateemissions(distance, mode, fuel_type)  
         route_details.append({
             'summary': route['summary'],
             'distance': f"{distance:.2f} km",
             'duration': duration,
             'emissions': f"{emissions} kg CO₂",
-            'polyline': route['overview_polyline']['points']
+            'polyline': route['overview_polyline']['points'],
         })
 
     return jsonify({'routes': route_details})
+def calculateemissions(distance_km, mode, fuel_type):
+    emission_factors = {
+        'DRIVING': {
+            'PETROL': 180,  
+            'DIESEL': 190,
+            'ELECTRIC': 0,
+            'CNG': 120,
+        },
+        'BICYCLING': 0,  
+        'TRANSIT': {
+            'PETROL': 100,  
+            'ELECTRIC': 0,
+        },
+        'TRUCK': 300, 
+    }
+
+    if mode == 'BICYCLING':
+        return 0
+
+    if mode in ['DRIVING', 'TRANSIT']:
+        emission_factor = emission_factors[mode].get(fuel_type, 0)
+    else:
+        emission_factor = emission_factors.get(mode, 0)
+
+    emissions = emission_factor * distance_km / 1000  
+    return round(emissions, 2)
+
 
 @app.route('/smart_scheduling')
 def smart_schedule_page():
