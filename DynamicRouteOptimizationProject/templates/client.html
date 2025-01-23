@@ -137,7 +137,9 @@
 
         // Handle Reschedule Order form submission
         document.getElementById("rescheduleForm").addEventListener("submit", async (e) => {
-            e.preventDefault();
+        e.preventDefault();
+
+        try {
             const response = await fetch("/reschedule_order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -146,9 +148,19 @@
                     newDate: document.getElementById("newDate").value,
                 }),
             });
+
             const result = await response.json();
-            alert(result.message);
-        });
+
+            if (response.ok) {
+                alert(result.message); // Success message
+            } else {
+                alert(`Error: ${result.message}`); // Show error from backend
+            }
+        } catch (error) {
+            alert("An error occurred while rescheduling. Please try again.");
+            console.error(error);
+        }
+    });
 
         // Load the map
         window.onload = initMap;

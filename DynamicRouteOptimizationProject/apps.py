@@ -297,16 +297,42 @@ def place_order():
 # Endpoint to reschedule an order
 @app.route('/reschedule_order', methods=['POST'])
 def reschedule_order():
-    data = request.json
-    orderId = data['orderId']
-    newDate = data['newDate']
+    data = request.get_json()
+    order_id = data.get('orderId')
+    new_date = data.get('newDate')
 
-    cursor.execute(
-        "UPDATE ClientOrders SET deliveryDate = %s WHERE orderId = %s",
-        (newDate, orderId)
-    )
-    conn.commit()
-    return jsonify({"message": "Order rescheduled successfully!"})
+    # Validate input
+    if not order_id or not new_date:
+        return jsonify({'message': 'Order ID and New Date are required'}), 400
+
+    try:
+        # Connect to database
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        # Check if the order ID exists
+        query_check = "SELECT * FROM clientOrders WHERE productId = %s"
+        cursor.execute(query_check, (order_id,))
+        order = cursor.fetchone()
+
+        if not order:
+            return jsonify({'message': f'Product ID {order_id} does not exist'}), 404
+
+        # Update the delivery date
+        query_update = "UPDATE clientOrders SET deliveryDate = %s WHERE productId = %s"
+        cursor.execute(query_update, (new_date, order_id))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({'message': f'Delivery date updated successfully for Product ID {order_id}'}), 200
+
+    except mysql.connector.Error as err:
+        return jsonify({'message': f'Database error: {err}'}), 500
+
+    except Exception as e:
+        return jsonify({'message': f'An unexpected error occurred: {str(e)}'}), 500
 
 # Endpoint to get delivery partner routes
 @app.route('/get_routes/<date>', methods=['GET'])
