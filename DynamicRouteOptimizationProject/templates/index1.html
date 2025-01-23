@@ -174,9 +174,21 @@
       <div class="col-lg-8">
         <div id="map"></div>
       </div>
+      <!-- <div class="mt-4">
+        <button id="download-static-map" class="btn btn-plan">
+          Download Detailed Route Map
+        </button>
+      </div> -->
+      <div class="mt-4">
+        <button id="download-pdf" class="btn btn-plan">
+          Offline - Download Route Map as PDF!
+        </button>
+      </div>
     </div>
   </div>
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
   <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places,geometry&callback=initMap" async defer></script>
   <script>
     let map, directionsService, currentPosition;
@@ -339,6 +351,75 @@ function displayRoutes(routes, mode, fuelType, enableTraffic) {
         }
       });
     }
+//     document.getElementById("download-static-map").addEventListener("click", () => {
+//     if (!routePolylines[selectedRouteIndex]) {
+//       alert("Please plan a route before downloading.");
+//       return;
+//     }
+
+//     const selectedRoutePath = routePolylines[selectedRouteIndex].getPath();
+//     const coordinates = [];
+//     selectedRoutePath.forEach((latLng) => {
+//       coordinates.push(`${latLng.lat()},${latLng.lng()}`);
+//     });
+
+//     const pathString = coordinates.join("|");
+
+//     const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?key={{ google_maps_api_key }}
+// &size=1280x720
+// &path=color:0x0000ff|weight:5|${pathString}
+// &markers=color:green|label:S|${coordinates[0]} 
+// &markers=color:red|label:E|${coordinates[coordinates.length - 1]}`;
+
+//     const link = document.createElement("a");
+//     link.href = staticMapUrl;
+//     link.download = "route_map.png";
+//     link.click();
+//   });
+
+  document.getElementById("download-pdf").addEventListener("click", async () => {
+    if (!routePolylines[selectedRouteIndex]) {
+      alert("Please plan a route before downloading.");
+      return;
+    }
+
+    const selectedRoutePath = routePolylines[selectedRouteIndex].getPath();
+    const coordinates = [];
+    selectedRoutePath.forEach((latLng) => {
+      coordinates.push(`${latLng.lat()},${latLng.lng()}`);
+    });
+
+    const pathString = coordinates.join("|");
+
+    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?key={{ google_maps_api_key }}
+&size=1920x1080
+&scale=2
+&path=color:0x0000ff|weight:5|${pathString}
+&markers=color:green|label:S|${coordinates[0]}
+&markers=color:red|label:E|${coordinates[coordinates.length - 1]}`;
+
+    try {
+      const response = await fetch(staticMapUrl);
+      const blob = await response.blob();
+      const imgUrl = URL.createObjectURL(blob);
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "px",
+        format: [1920, 1080],
+      });
+      const img = new Image();
+      img.src = imgUrl;
+      img.onload = function () {
+        pdf.addImage(img, "PNG", 0, 0, 1920, 1080);
+        pdf.save("RouteMap.pdf");
+      };
+    } catch (error) {
+      console.error("Error generating the PDF:", error);
+      alert("Failed to generate the PDF. Please try again.");
+    }
+  });
   </script>
 </body>
 
