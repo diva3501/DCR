@@ -170,19 +170,15 @@ def calculate_multi_routes():
         start_location = data['start_location']
         destinations = data['destinations']
 
-        # Initialize routes list
         routes = []
-
-        # Loop through destinations and fetch route data
         for index, destination in enumerate(destinations):
             response = get_route_from_google_maps(start_location, destination)
             for route in response.get('routes', []):
-                distance_km = route['legs'][0]['distance']['value'] / 1000  # Convert meters to km
+                distance_km = route['legs'][0]['distance']['value'] / 1000  
                 duration_traffic = route['legs'][0].get('duration_in_traffic', {}).get('text', route['legs'][0]['duration']['text'])
                 emissions = calculate_emissions(distance_km)
                 arrival_time = estimate_arrival_time(route['legs'][0]['duration_in_traffic']['value'] if 'duration_in_traffic' in route['legs'][0] else route['legs'][0]['duration']['value'])
 
-                # Append route details
                 routes.append({
                     'destination': destination,
                     'distance': f"{distance_km:.2f} km",
@@ -192,7 +188,6 @@ def calculate_multi_routes():
                     'polyline': route['overview_polyline']['points']
                 })
 
-        # Sort routes by shortest distance and emissions
         routes = sorted(routes, key=lambda x: (float(x['distance'].split()[0]), float(x['emissions'].split()[0])))
 
         return jsonify({'routes': routes}), 200
@@ -210,7 +205,7 @@ def get_route_from_google_maps(start_coords, end_coords):
             'origin': start_coords,
             'destination': end_coords,
             'key': GOOGLE_MAPS_API_KEY,
-            'departure_time': 'now',  # For traffic data
+            'departure_time': 'now', 
             'alternatives': 'true',
         }
         response = requests.get(directions_url, params=params)
