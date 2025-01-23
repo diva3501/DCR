@@ -154,7 +154,6 @@
     let map, directionsService, currentPosition;
     let routePolylines = [];
 
-    // Initialize Map and set current location
     function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 12.9716, lng: 77.5946 },
@@ -163,15 +162,14 @@
 
       directionsService = new google.maps.DirectionsService();
 
-      // Get Current Location
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function (position) {
           currentPosition = {
             lat: position.coords.latitude,
             lng: position.coords.longitude
           };
-          map.setCenter(currentPosition); // Center the map on the user's location
-          addMarker(currentPosition, "Your Location", "blue"); // Marker for user's location
+          map.setCenter(currentPosition); 
+          addMarker(currentPosition, "Your Location", "blue"); 
         });
       }
 
@@ -216,7 +214,6 @@
       routePolylines.forEach(polyline => polyline.setMap(null));
       routePolylines = [];
 
-      // Sort the routes by duration (or distance if preferred)
       routes.sort((a, b) => a.legs[0].duration.value - b.legs[0].duration.value);
 
       routes.forEach((route, index) => {
@@ -253,14 +250,13 @@
     }
 
     function getRouteColor(index) {
-      const colors = ['#56ab2f', '#1c87c9', '#f39c12']; // Green, Blue, and Yellow
-      return colors[index] || '#999'; // Default to gray if there are more than 3 routes
+      const colors = ['#56ab2f', '#1c87c9', '#f39c12'];
+      return colors[index] || '#999'; 
     }
 
     function calculateEmission(route) {
-      // Example: Estimate emission as 100g per km for simplicity
-      const distanceInKm = route.legs[0].distance.value / 1000; // Convert from meters to kilometers
-      const emissionFactor = 100; // Emission factor in grams per kilometer (this is a simplistic value)
+      const distanceInKm = route.legs[0].distance.value / 1000; 
+      const emissionFactor = 100; 
       return (distanceInKm * emissionFactor).toFixed(0);
     }
 

@@ -1,70 +1,258 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard</title>
+  <title>RouteOpt</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   <style>
     .dashboard-header {
-      background: linear-gradient(to right, #f8f9fa, #e9ecef);
+      background: linear-gradient(45deg, #007bff, #6c757d);
       border-radius: 10px;
-      padding: 30px 20px;
+      padding: 40px 20px;
       text-align: center;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      margin-bottom: 30px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+      margin-bottom: 50px;
+      color: #fff;
+    }
+
+    .dashboard-header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 2.5rem;
+      font-weight: bold;
+    }
+
+    .dashboard-header p {
+      font-size: 1.25rem;
+      font-family: 'Roboto', sans-serif;
+    }
+
+    .section {
+      padding: 70px 0;
+    }
+
+    .section:nth-child(odd) {
+      background-color: #f8f9fa;
+    }
+
+    .section-title {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    .section-title h2 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 2rem;
+      color: #343a40;
+      font-weight: 600;
+    }
+
+    .section-title p {
+      font-size: 1.1rem;
+      color: #6c757d;
     }
 
     .card {
       border: none;
-      transition: all 0.3s ease;
+      border-radius: 15px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      background-color: #ffffff;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(50px);
+    }
+
+    .card.visible {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.6s ease, transform 0.6s ease;
     }
 
     .card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      transform: translateY(-10px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-body {
+      text-align: center;
+      padding: 30px 20px;
+    }
+
+    .card-body i {
+      font-size: 3.5rem;
+      color: #007bff;
+      margin-bottom: 20px;
+    }
+
+    .card:hover .card-body i {
+      color: #6c757d;
+    }
+
+    .btn-primary {
+      border-radius: 50px;
+    }
+
+    .btn-primary:hover {
+      background-color: #0056b3;
+      transform: scale(1.05);
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-header h1 {
+        font-size: 2rem;
+      }
+
+      .dashboard-header p {
+        font-size: 1rem;
+      }
+
+      .section-title h2 {
+        font-size: 1.5rem;
+      }
+
+      .card {
+        margin-bottom: 20px;
+      }
     }
   </style>
 </head>
+
 <body>
-  {% include 'navbar.html' %} 
-  
+  {% include 'navbar.html' %}
+
   <div class="container py-5">
     <div class="dashboard-header">
-      <h1 class="display-4">Welcome to Your RouteOpt</h1>
-      <p class="lead">
-        Access tools to optimize routes, monitor tasks, and minimize your carbon footprint efficiently.
-      </p>
+      <h1 class="display-4">Welcome to RouteOpt</h1>
+      <p class="lead">Your one-stop solution for route optimization, smart scheduling, and eco-balance tracking.</p>
     </div>
-    <div class="dashboard-content row">
-      <div class="col-md-4">
-        <div class="card shadow-lg">
-          <div class="card-body text-center">
-            <h5 class="card-title">Plan Routes</h5>
-            <p class="card-text">Start planning efficient routes and reduce your emissions today.</p>
-            <a href="/routes" class="btn btn-primary">Plan Now</a>
+
+    <div id="route-planner" class="section">
+      <div class="section-title">
+        <h2>Route Planner</h2>
+        <p>Optimize your routes to save time and reduce your carbon footprint.</p>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card shadow">
+            <div class="card-body">
+              <i class="fas fa-map-marked-alt"></i>
+              <h5 class="card-title">Plan Routes</h5>
+              <p class="card-text">Create routes for your travel and minimize travel time effectively.</p>
+              <a href="/routes" class="btn btn-primary">Plan Now</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow">
+            <div class="card-body">
+              <i class="fas fa-route"></i>
+              <h5 class="card-title">Multi-Destination Routes</h5>
+              <p class="card-text">Effortlessly plan multiple routes for your journeys in one go.</p>
+              <a href="/calculate-multi-routes" class="btn btn-primary">Plan MultiRoute</a>
+            </div>
           </div>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="card shadow-lg">
-          <div class="card-body text-center">
-            <h5 class="card-title">Monitor Tasks</h5>
-            <p class="card-text">Keep track of your progress and stay organized with our tools.</p>
-            <a href="/tasks" class="btn btn-secondary">View Tasks</a>
+    </div>
+
+    <div id="smart-scheduling" class="section">
+      <div class="section-title">
+        <h2>Smart Scheduling</h2>
+        <p>Ensure you never miss a task with advanced scheduling features.</p>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card shadow">
+            <div class="card-body">
+              <i class="fas fa-calendar-alt"></i>
+              <h5 class="card-title">Smart Scheduling</h5>
+              <p class="card-text">Plan and organize your tasks efficiently using our scheduler.</p>
+              <a href="/smart_scheduling" class="btn btn-primary">Schedule Now</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow">
+            <div class="card-body">
+              <i class="fas fa-sync-alt"></i>
+              <h5 class="card-title">Reschedule Tasks</h5>
+              <p class="card-text">Need changes? Reschedule your tasks anytime with ease.</p>
+              <a href="/reschedule" class="btn btn-primary">Reschedule</a>
+            </div>
           </div>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="card shadow-lg">
-          <div class="card-body text-center">
-            <h5 class="card-title">Analytics</h5>
-            <p class="card-text">Gain insights and analyze your data for better performance.</p>
-            <a href="/analytics" class="btn btn-info">Explore Analytics</a>
+    </div>
+
+    <div id="eco-balance" class="section">
+      <div class="section-title">
+        <h2>Eco Balance</h2>
+        <p>Track your environmental impact and find ways to reduce it.</p>
+      </div>
+      <div class="row">
+        <div class="col-md-12">
+          <div class="card shadow">
+            <div class="card-body">
+              <i class="fas fa-leaf"></i>
+              <h5 class="card-title">Eco Balance</h5>
+              <p class="card-text">Analyze your actions and learn how to improve your ecological footprint.</p>
+              <a href="/eco-balance" class="btn btn-primary">Eco Insights</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="analytics" class="section">
+      <div class="section-title">
+        <h2>Analytics</h2>
+        <p>Gain valuable insights and monitor your performance effectively.</p>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card shadow">
+            <div class="card-body">
+              <i class="fas fa-chart-line"></i>
+              <h5 class="card-title">Task Analytics</h5>
+              <p class="card-text">Track task progress and measure the time spent on activities.</p>
+              <a href="/analytics" class="btn btn-primary">View Analytics</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow">
+            <div class="card-body">
+              <i class="fas fa-database"></i>
+              <h5 class="card-title">Data Insights</h5>
+              <p class="card-text">Explore trends and insights for better decision-making.</p>
+              <a href="/data-insights" class="btn btn-primary">Explore</a>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  <script>
+    const cards = document.querySelectorAll(".card");
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.1
+    });
+
+    cards.forEach(card => {
+      observer.observe(card);
+    });
+  </script>
 </body>
+
 </html>

@@ -3,40 +3,85 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <title>Navbar</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/css/bootstrap.min.css">
+  <style>
+    .navbar {
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .navbar-brand img {
+      height: 40px;
+      width: auto;
+    }
+
+    .nav-link:hover {
+      color: #ff7f50 !important;
+    }
+
+    .fixed-top {
+      background: rgba(0, 0, 0, 0.8) !important;
+    }
+
+    .navbar-nav .nav-item {
+      margin: 0 5px;
+    }
+
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+    }
+    .navbar-brand span {
+      margin-left: 10px; 
+    }
+
+    @media (max-width: 767px) {
+      .navbar-collapse {
+        text-align: center;
+      }
+    }
+  </style>
+  <title>Enhanced Navbar</title>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <a class="navbar-brand" href="/">RouteOpt</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav">
-        <li class="nav-item">
-          <a class="nav-link" href="/routes">Dynamic Routes</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/calculate-multi-routes">MultiPoint-RoutePlanner</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/reschedule">Reschedule</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/client">Client</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/deliveryPartner">Delivery Partner</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/smart_scheduling">Smart Scheduling</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/eco-balance">Eco Balance</a>
-        </li>
-      </ul>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="/">
+        <img src="https://img.freepik.com/premium-photo/trust-point-symbol-3d-flat-icon-with-copy-space-project-planning-concept_980716-277722.jpg?w=740" alt="RouteOpt Logo">
+        <span>RouteOpt</span>
+      </a>
+      
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="/">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/routes">Routes</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/smart_scheduling">Smart Scheduling</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/calculate-multi-routes">MultiRoutePlanner</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/reschedule">Reschedule</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/eco-balance">Eco Balance</a>
+          </li>
+        </ul>
+      </div>
     </div>
   </nav>
+  <div style="padding-top: 75px;">
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/js/bootstrap.min.js"></script>
 </body>
 </html>
