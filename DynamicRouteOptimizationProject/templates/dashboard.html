@@ -9,41 +9,39 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   <style>
     body {
-      background: linear-gradient(to right, #ece9e6, #ffffff);
+      background: linear-gradient(to right, #e8f5e9, #ffffff);
       font-family: "Roboto", sans-serif;
+      overflow-x: hidden;
     }
+
     .dashboard-header {
       background: linear-gradient(45deg, #007bff, #6c757d);
       border-radius: 10px;
       padding: 40px 20px;
       text-align: center;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-      margin-bottom: 50px;
       color: #fff;
     }
 
     .dashboard-header h1 {
       font-family: 'Poppins', sans-serif;
-      font-size: 2.5rem;
+      font-size: 3rem;
       font-weight: bold;
     }
 
     .dashboard-header p {
-      font-size: 1.25rem;
-      font-family: 'Roboto', sans-serif;
+      font-size: 1.2rem;
+      margin-bottom: 30px;
     }
 
     .section {
-      padding: 70px 0;
-    }
-
-    .section:nth-child(odd) {
-      background-color: #f8f9fa;
+      padding: 60px 0;
+      position: relative;
     }
 
     .section-title {
       text-align: center;
-      margin-bottom: 50px;
+      margin-bottom: 40px;
     }
 
     .section-title h2 {
@@ -54,7 +52,7 @@
     }
 
     .section-title p {
-      font-size: 1.1rem;
+      font-size: 1rem;
       color: #6c757d;
     }
 
@@ -64,14 +62,6 @@
       transition: transform 0.3s ease, box-shadow 0.3s ease;
       background-color: #ffffff;
       overflow: hidden;
-      opacity: 0;
-      transform: translateY(50px);
-    }
-
-    .card.visible {
-      opacity: 1;
-      transform: translateY(0);
-      transition: opacity 0.6s ease, transform 0.6s ease;
     }
 
     .card:hover {
@@ -81,13 +71,13 @@
 
     .card-body {
       text-align: center;
-      padding: 30px 20px;
+      padding: 20px;
     }
 
     .card-body i {
       font-size: 3.5rem;
       color: #007bff;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
     .card:hover .card-body i {
@@ -103,21 +93,32 @@
       transform: scale(1.05);
     }
 
+    .highlight-section {
+      background-color: #f1f8e9;
+      padding: 60px 20px;
+      border-radius: 15px;
+      margin-top: 40px;
+    }
+
+    .highlight-section img {
+      width: 100%;
+      max-height: 400px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
     @media (max-width: 768px) {
       .dashboard-header h1 {
-        font-size: 2rem;
-      }
-
-      .dashboard-header p {
-        font-size: 1rem;
+        font-size: 2.5rem;
       }
 
       .section-title h2 {
         font-size: 1.5rem;
       }
 
-      .card {
-        margin-bottom: 20px;
+      .highlight-section img {
+        max-height: 300px;
       }
     }
   </style>
@@ -128,11 +129,15 @@
 
   <div class="container py-5">
     <div class="dashboard-header">
-      <h1 class="display-4">Welcome to RouteOpt</h1>
-      <p class="lead">Your one-stop solution for route optimization, smart scheduling, and eco-balance tracking.</p>
+      <h1>Welcome to RouteOpt</h1>
+      <p>Your one-stop solution for route optimization, smart scheduling, and eco-balance tracking.</p>
+      <div>
+        <a href="/get-started" class="btn btn-primary btn-lg">Get Started</a>
+      </div>
     </div>
 
-    <div id="route-planner" class="section">
+
+    <div class="section" id="route-planner">
       <div class="section-title">
         <h2>Route Planner</h2>
         <p>Optimize your routes to save time and reduce your carbon footprint.</p>
@@ -143,7 +148,7 @@
             <div class="card-body">
               <i class="fas fa-map-marked-alt"></i>
               <h5 class="card-title">Plan Routes</h5>
-              <p class="card-text">Create routes for your travel and minimize travel time effectively.</p>
+              <p>Create routes for your travel and minimize travel time effectively.</p>
               <a href="/routes" class="btn btn-primary">Plan Now</a>
             </div>
           </div>
@@ -153,44 +158,43 @@
             <div class="card-body">
               <i class="fas fa-route"></i>
               <h5 class="card-title">Multi-Destination Routes</h5>
-              <p class="card-text">Effortlessly plan multiple routes for your journeys in one go.</p>
+              <p>Effortlessly plan multiple routes for your journeys in one go.</p>
               <a href="/calculate-multi-routes" class="btn btn-primary">Plan MultiRoute</a>
             </div>
           </div>
         </div>
       </div>
     </div>
-
-    <div id="smart-scheduling" class="section">
+    <div class="section" id="route-planner">
       <div class="section-title">
-        <h2>Smart Scheduling</h2>
-        <p>Ensure you never miss a task with advanced scheduling features.</p>
+        <h2>Client Delivery</h2>
+        <p>Optimize your delivery processes to save time and streamline logistics.</p>
       </div>
       <div class="row">
         <div class="col-md-6">
           <div class="card shadow">
             <div class="card-body">
-              <i class="fas fa-calendar-alt"></i>
-              <h5 class="card-title">Smart Scheduling</h5>
-              <p class="card-text">Plan and organize your tasks efficiently using our scheduler.</p>
-              <a href="/smart_scheduling" class="btn btn-primary">Schedule Now</a>
+              <i class="fas fa-users"></i>
+              <h5 class="card-title">Client Management</h5>
+              <p>Manage and track all your client deliveries, ensuring efficiency and timely completion.</p>
+              <a href="/client" class="btn btn-primary">Manage Clients</a>
             </div>
           </div>
         </div>
         <div class="col-md-6">
           <div class="card shadow">
             <div class="card-body">
-              <i class="fas fa-sync-alt"></i>
-              <h5 class="card-title">Reschedule Tasks</h5>
-              <p class="card-text">Need changes? Reschedule your tasks anytime with ease.</p>
-              <a href="/reschedule" class="btn btn-primary">Reschedule</a>
+              <i class="fas fa-truck"></i>
+              <h5 class="card-title">Delivery Partner</h5>
+              <p>Coordinate with delivery partners for smooth and timely distribution of goods.</p>
+              <a href="/deliveryPartner" class="btn btn-primary">Partner Coordination</a>
             </div>
           </div>
         </div>
       </div>
     </div>
-
-    <div id="eco-balance" class="section">
+    
+    <div class="section" id="eco-balance">
       <div class="section-title">
         <h2>Eco Balance</h2>
         <p>Track your environmental impact and find ways to reduce it.</p>
@@ -201,7 +205,7 @@
             <div class="card-body">
               <i class="fas fa-leaf"></i>
               <h5 class="card-title">Eco Balance</h5>
-              <p class="card-text">Analyze your actions and learn how to improve your ecological footprint.</p>
+              <p>Analyze your actions and learn how to improve your ecological footprint.</p>
               <a href="/eco-balance" class="btn btn-primary">Eco Insights</a>
             </div>
           </div>
@@ -209,34 +213,6 @@
       </div>
     </div>
 
-    <div id="analytics" class="section">
-      <div class="section-title">
-        <h2>Analytics</h2>
-        <p>Gain valuable insights and monitor your performance effectively.</p>
-      </div>
-      <div class="row">
-        <div class="col-md-6">
-          <div class="card shadow">
-            <div class="card-body">
-              <i class="fas fa-chart-line"></i>
-              <h5 class="card-title">Task Analytics</h5>
-              <p class="card-text">Track task progress and measure the time spent on activities.</p>
-              <a href="/analytics" class="btn btn-primary">View Analytics</a>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="card shadow">
-            <div class="card-body">
-              <i class="fas fa-database"></i>
-              <h5 class="card-title">Data Insights</h5>
-              <p class="card-text">Explore trends and insights for better decision-making.</p>
-              <a href="/data-insights" class="btn btn-primary">Explore</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <script>
