@@ -290,39 +290,15 @@ def estimate_arrival_time(duration_seconds):
     arrival_time = current_time + timedelta(seconds=duration_seconds)
     return arrival_time.strftime('%I:%M %p')
 
-@app.route('/reschedule')
-def index():
-    return render_template('rescheduling.html', title="Real-Time Delivery Rescheduling System")
-
-@app.route('/reschedule', methods=['POST'])
-def reschedule():
-    try:
-        data = request.json
-        delivery_id = data.get("delivery_id")
-        new_date = data.get("new_date")
-        new_time = data.get("new_time")
-        alternate_option = data.get("alternate_option")
-
-        if not (delivery_id and (new_date or alternate_option)):
-            return jsonify({"status": "failure", "message": "Missing required fields"}), 400
-
-        response_message = f"Delivery {delivery_id} successfully rescheduled to {new_date} at {new_time}" \
-            if new_date else f"Delivery {delivery_id} updated with alternate option: {alternate_option}"
-
-        return jsonify({"status": "success", "message": response_message}), 200
-
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-@app.route('/client')
-def client():
-    return render_template('client.html', title="Real-Time Delivery Rescheduling System", google_maps_api_key=GOOGLE_MAPS_API_KEY)
-
 
 @app.route('/deliveryPartner')
 def dp():
     return render_template('DeliveryPartner.html', title="Real-Time Delivery Rescheduling System", google_maps_api_key=GOOGLE_MAPS_API_KEY)
+    
+@app.route('/client')
+def client():
+    return render_template('client.html', title="Real-Time Delivery Rescheduling System", google_maps_api_key=GOOGLE_MAPS_API_KEY)
+
 
 @app.route('/place_order', methods=['POST'])
 def place_order():
