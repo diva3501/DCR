@@ -10,6 +10,7 @@
     <style>
         body {
             background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
         }
         .container {
             max-width: 1200px;
@@ -20,14 +21,36 @@
             margin-bottom: 20px;
         }
         .info-card {
-            padding: 15px;
+            padding: 20px;
             background-color: white;
             border: 1px solid #ddd;
             border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         #route-results {
             overflow-y: auto;
             max-height: 250px;
+        }
+        .form-group label {
+            font-weight: bold;
+        }
+        .btn-custom {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-custom:hover {
+            background-color: #45a049;
+        }
+        .info-card h5 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .form-control, .form-select, .table {
+            font-size: 1rem;
+        }
+        #route-details td, #route-details th {
+            vertical-align: middle;
         }
     </style>
 </head>
@@ -44,11 +67,18 @@
                         <div class="mb-3">
                             <label for="start-location" class="form-label">Start Location:</label>
                             <input type="text" id="start-location" class="form-control" placeholder="Enter start location" required>
-                            <button id="geolocate" type="button" class="btn btn-sm btn-link">Use My Location</button>
+                            <button id="geolocate" type="button" class="btn btn-sm btn-link mt-2">Use My Location</button>
                         </div>
                         <div class="mb-3">
-                            <label for="destinations" class="form-label">Destinations:</label>
-                            <textarea id="destinations" class="form-control" rows="4" placeholder="Enter destinations, one per line" required></textarea>
+                            <label for="destinations" class="form-label">Final Destination:</label>
+                            <input type="text" id="final-destination" class="form-control" placeholder="Enter final destination" required>
+                            <small id="destinationHelp" class="form-text text-muted">
+                                Mention the final destination for the optimal route.
+                            </small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="destinations" class="form-label">Intermediate Destinations:</label>
+                            <textarea id="destinations" class="form-control" rows="4" placeholder="Enter destinations, one per line (Optional)"></textarea>
                         </div>
                         <div class="mb-3">
                             <label for="travel-mode" class="form-label">Travel Mode:</label>
@@ -59,7 +89,7 @@
                                 <option value="TRANSIT">Transit</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Plan My Route</button>
+                        <button type="submit" class="btn btn-custom w-100">Plan My Route</button>
                     </form>
                 </div>
             </div>
@@ -100,7 +130,7 @@
         function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
                 zoom: 7,
-                center: { lat: 20.5937, lng: 78.9629 }, 
+                center: { lat: 20.5937, lng: 78.9629 },
             });
 
             directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
@@ -120,17 +150,14 @@
             });
         }
 
-        function calculateRoute(start, destinations, travelMode) {
-            const waypoints = destinations.slice(0, -1).map(loc => ({ location: loc, stopover: true }));
-
+        function calculateRoute(start, finalDestination, intermediateDestinations, travelMode) {
+            const waypoints = intermediateDestinations.map(loc => ({ location: loc, stopover: true }));
+            
             const request = {
                 origin: start,
-                destination: destinations[destinations.length - 1],
+                destination: finalDestination,
                 waypoints: waypoints,
                 travelMode: travelMode,
-                drivingOptions: {
-                    departureTime: new Date(),
-                },
             };
 
             directionsService.route(request, (result, status) => {
@@ -140,12 +167,12 @@
 
                     let detailsTable = document.getElementById("route-details");
                     detailsTable.innerHTML = "";
-                    
+
                     route.legs.forEach((leg, i) => {
                         let duration = leg.duration_in_traffic ? leg.duration_in_traffic.text : leg.duration.text;
                         let distance = leg.distance.text;
                         let arrival = new Date(Date.now() + (leg.duration.value * 1000)).toLocaleTimeString();
-                        
+
                         const row = `
                             <tr>
                                 <td>${i + 1}</td>
@@ -194,13 +221,14 @@
             $("#route-form").on("submit", function (event) {
                 event.preventDefault();
                 const start = $("#start-location").val();
-                const destinations = $("#destinations").val().split("\n").filter(Boolean);
+                const finalDestination = $("#final-destination").val();
+                const intermediateDestinations = $("#destinations").val().split("\n").filter(Boolean);
                 const travelMode = $("#travel-mode").val();
 
-                if (start && destinations.length) {
-                    calculateRoute(start, [start, ...destinations], travelMode);
+                if (start && finalDestination) {
+                    calculateRoute(start, finalDestination, intermediateDestinations, travelMode);
                 } else {
-                    alert("Please enter a valid start and destinations.");
+                    alert("Please enter a valid start and final destination.");
                 }
             });
         });

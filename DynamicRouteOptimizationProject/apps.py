@@ -436,5 +436,6 @@ def delivery_partner():
     
     return jsonify({'route_details': route_details, 'detailed_points': detailed_points})
 
+
 if __name__ == '__main__':
     app.run(debug=True)
