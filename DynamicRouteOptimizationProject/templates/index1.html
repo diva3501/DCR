@@ -100,8 +100,8 @@
     padding: 8px 16px;
     border-radius: 8px;
     font-size: 0.9rem;
-    width: auto; /* Makes the button width fit its content */
-    display: inline-block; /* Ensures the button doesn't expand unnecessarily */
+    width: auto; 
+    display: inline-block; 
   }
 
   .btn-download:hover {
@@ -244,41 +244,28 @@
         };
       }
 
-  directionsService.route(request, (result, status) => {
-    if (status === "OK") {
-      displayRoutes(result.routes, mode, fuelType);
-      const startLocation = result.routes[0].legs[0].start_location;
+      directionsService.route(request, (result, status) => {
+        if (status === "OK") {
+          displayRoutes(result.routes, mode, fuelType);
+          const startLocation = result.routes[0].legs[0].start_location;
       const endLocation = result.routes[0].legs[0].end_location;
       addMarker(startLocation, "Start Point", "blue");
       addMarker(endLocation, "End Point", "green");
-    } else {
-      alert("Unable to calculate routes. Please try again.");
+        } else {
+          alert("Unable to calculate routes. Please try again.");
+        }
+      });
     }
-  });
-}
 
-function displayRoutes(routes, mode, fuelType, enableTraffic) {
-  const routeInfo = document.getElementById("route-info");
-  routeInfo.innerHTML = "";
-  routePolylines.forEach(polyline => polyline.setMap(null));
-  routePolylines = [];
+    function displayRoutes(routes, mode, fuelType) {
+      const routeInfo = document.getElementById("route-info");
+      routeInfo.innerHTML = "";
+      routePolylines.forEach(polyline => polyline.setMap(null));
+      routePolylines = [];
 
       routes.sort((a, b) => a.legs[0].duration.value - b.legs[0].duration.value);
-
-      const routeColors = ["#007bff", "#ff8c00", "#32cd32"];
-
-      routes.forEach((route, index) => {
-        const routeColor = routeColors[index];
-        const polyline = new google.maps.Polyline({
-          path: route.overview_path,
-          strokeColor: routeColor,
-          strokeOpacity: 0.7,
-          strokeWeight: 6
-        });
-        polyline.setMap(map);
-        routePolylines.push(polyline);
-  const routeColors = ["#006400", "#0000FF", "#ffA500"]; 
-  const sortedRoutes = routes.map((route, index) => ({
+      const routeColors = ["#006400", "#0000FF", "#ffA500"]; 
+      const sortedRoutes = routes.map((route, index) => ({
     ...route,
     color: routeColors[index % routeColors.length],
   })).reverse();
@@ -291,8 +278,8 @@ function displayRoutes(routes, mode, fuelType, enableTraffic) {
       strokeWeight: 6,
       zIndex: routeColor === "#006400" ? 3 : routeColor === "#0000FF" ? 2 : 1, // Higher zIndex for green
     });
-    polyline.setMap(map);
-    routePolylines.push(polyline);
+        polyline.setMap(map);
+        routePolylines.push(polyline);
 
         const duration = route.legs[0].duration.text;
         const distance = route.legs[0].distance.text;
