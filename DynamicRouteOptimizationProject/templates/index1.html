@@ -17,7 +17,6 @@
       width: 100%;
       border-radius: 10px;
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-      margin-top: 20px;
     }
 
     .info-box {
@@ -25,6 +24,7 @@
       border-radius: 12px;
       padding: 20px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      height: 100%;
     }
 
     .info-box h5 {
@@ -40,14 +40,7 @@
       padding: 10px;
     }
 
-    .btn-plan {
-      background: linear-gradient(90deg, #56ab2f, #a8e063);
-      border: none;
-      color: white;
-      font-weight: 600;
-      transition: 0.3s ease;
-      width: 100%;
-    }
+
 
     .btn-plan:hover {
       background: linear-gradient(90deg, #45a049, #81c684);
@@ -71,38 +64,20 @@
       transform: scale(1.02);
     }
 
-    .route-option h6 {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: #444;
-    }
-
-    .route-option p {
-      margin: 0;
-      color: #555;
-      font-size: 0.95rem;
-    }
-
     .highlighted-route {
-      border-left: 4px solid #56ab2f;
+      border-left: 4px solid #007bff;
       background: #eef9ef !important;
     }
 
     .route-distance {
       font-size: 1.1rem;
       font-weight: bold;
-      color: #56ab2f;
+      color: #007bff;
     }
 
     .route-duration {
       font-size: 1rem;
       color: #333;
-    }
-
-    .route-number {
-      font-size: 1.2rem;
-      font-weight: bold;
-      margin-bottom: 5px;
     }
 
     .route-emission {
@@ -111,11 +86,28 @@
       font-weight: bold;
     }
 
-    .route-condition {
-      font-size: 0.9rem;
-      color: #f39c12;
-      font-style: italic;
+    .route-number {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 5px;
     }
+    .btn-download {
+    background: linear-gradient(90deg, #56ab2f, #a8e063);
+    border: none;
+    color: white;
+    font-weight: 600;
+    transition: 0.3s ease;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    width: auto; /* Makes the button width fit its content */
+    display: inline-block; /* Ensures the button doesn't expand unnecessarily */
+  }
+
+  .btn-download:hover {
+    background: linear-gradient(90deg, #45a049, #81c684);
+    transform: scale(1.05);
+  }
 
     @media (max-width: 768px) {
       #map {
@@ -132,10 +124,10 @@
 <body>
   {% include 'navbar.html' %}
 
-  <div class="container my-4">
+  <div class="container-fluid my-4">
     <h1 class="text-center text-dark mb-4">Efficient Route Planner</h1>
     <div class="row">
-      <div class="col-lg-4">
+      <div class="col-md-3">
         <div class="info-box">
           <h5>Set Your Locations</h5>
           <input id="start-input" type="text" class="form-control search-input" placeholder="Enter Start Location" />
@@ -166,29 +158,31 @@
             Plan Route
           </button>
         </div>
-        <div class="info-box mt-4">
+      </div>
+
+      <div class="col-md-6">
+        <div id="map"></div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="info-box">
           <h5>Route Options</h5>
           <div id="route-info" class="list-group"></div>
         </div>
       </div>
-      <div class="col-lg-8">
-        <div id="map"></div>
-      </div>
-      <!-- <div class="mt-4">
-        <button id="download-static-map" class="btn btn-plan">
-          Download Detailed Route Map
-        </button>
-      </div> -->
-      <div class="mt-4">
+    </div>
+
+    <div class="row mt-4">
+      <div class="col-md-12 text-center">
         <button id="download-pdf" class="btn btn-plan">
           Offline - Download Route Map as PDF!
         </button>
       </div>
     </div>
   </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  
   <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places,geometry&callback=initMap" async defer></script>
   <script>
     let map, directionsService, currentPosition;
@@ -236,98 +230,97 @@
     }
 
     function calculateRoutes(start, end, mode, fuelType, enableTraffic) {
-  const request = {
-    origin: start,
-    destination: end,
-    travelMode: google.maps.TravelMode[mode],
-    provideRouteAlternatives: true,
-  };
+      const request = {
+        origin: start,
+        destination: end,
+        travelMode: google.maps.TravelMode[mode],
+        provideRouteAlternatives: true,
+      };
 
-  if (enableTraffic) {
-    request.drivingOptions = {
-      departureTime: new Date(),
-      trafficModel: 'pessimistic', 
-    };
-  }
+      if (enableTraffic) {
+        request.drivingOptions = {
+          departureTime: new Date(),
+          trafficModel: 'pessimistic',
+        };
+      }
 
-  directionsService.route(request, (result, status) => {
-    if (status === "OK") {
-      displayRoutes(result.routes, mode, fuelType);
-    } else {
-      alert("Unable to calculate routes. Please try again.");
-    }
-  });
-}
-
-
-function displayRoutes(routes, mode, fuelType, enableTraffic) {
-  const routeInfo = document.getElementById("route-info");
-  routeInfo.innerHTML = "";
-  routePolylines.forEach(polyline => polyline.setMap(null));
-  routePolylines = [];
-
-  routes.sort((a, b) => a.legs[0].duration.value - b.legs[0].duration.value);
-
-  const routeColors = ["#006400", "#0000FF", "#ffA500"]; 
-
-  routes.forEach((route, index) => {
-    const routeColor = routeColors[index];
-    const polyline = new google.maps.Polyline({
-      path: route.overview_path,
-      strokeColor: routeColor,
-      strokeOpacity: 0.7,
-      strokeWeight: 6
-    });
-    polyline.setMap(map);
-    routePolylines.push(polyline);
-
-    const duration = route.legs[0].duration.text;
-    const distance = route.legs[0].distance.text;
-    const emission = calculateCO2Emission(route.legs[0].distance.value / 1000, mode, fuelType);
-
-    const routeElement = document.createElement("div");
-    routeElement.classList.add("route-option");
-    routeElement.style.cursor = "pointer";
-    routeElement.innerHTML = `
-      <div>
-        <h6 style="color:${routeColor};">Route ${index + 1}</h6>
-        <p class="route-distance">Distance: ${distance}</p>
-        <p class="route-duration">Duration: ${duration}</p>
-        <p class="route-emission">CO2 Emission: ${emission}</p>
-      </div>
-    `;
-
-    routeElement.addEventListener("click", () => {
-      map.setCenter(route.legs[0].end_location);
-      map.setZoom(14);  
-      selectedRouteIndex = index;
-
-      routeElement.classList.add("highlighted-route");
-
-      routePolylines.forEach((polyline, polyIndex) => {
-        if (polyIndex !== index) {
-          polyline.setMap(null);
+      directionsService.route(request, (result, status) => {
+        if (status === "OK") {
+          displayRoutes(result.routes, mode, fuelType);
+        } else {
+          alert("Unable to calculate routes. Please try again.");
         }
       });
-    });
+    }
 
-    routeInfo.appendChild(routeElement);
-  });
+    function displayRoutes(routes, mode, fuelType) {
+      const routeInfo = document.getElementById("route-info");
+      routeInfo.innerHTML = "";
+      routePolylines.forEach(polyline => polyline.setMap(null));
+      routePolylines = [];
 
-  map.setCenter(routes[0].legs[0].start_location);
-  map.setZoom(14);
-}
+      routes.sort((a, b) => a.legs[0].duration.value - b.legs[0].duration.value);
+
+      const routeColors = ["#007bff", "#ff8c00", "#32cd32"];
+
+      routes.forEach((route, index) => {
+        const routeColor = routeColors[index];
+        const polyline = new google.maps.Polyline({
+          path: route.overview_path,
+          strokeColor: routeColor,
+          strokeOpacity: 0.7,
+          strokeWeight: 6
+        });
+        polyline.setMap(map);
+        routePolylines.push(polyline);
+
+        const duration = route.legs[0].duration.text;
+        const distance = route.legs[0].distance.text;
+        const emission = calculateCO2Emission(route.legs[0].distance.value / 1000, mode, fuelType);
+
+        const routeElement = document.createElement("div");
+        routeElement.classList.add("route-option");
+        routeElement.style.cursor = "pointer";
+        routeElement.innerHTML = `
+          <div>
+            <h6 style="color:${routeColor};">Route ${index + 1}</h6>
+            <p class="route-distance">Distance: ${distance}</p>
+            <p class="route-duration">Duration: ${duration}</p>
+            <p class="route-emission">CO2 Emission: ${emission}</p>
+          </div>
+        `;
+
+        routeElement.addEventListener("click", () => {
+          map.setCenter(route.legs[0].end_location);
+          map.setZoom(14);
+          selectedRouteIndex = index;
+
+          routeElement.classList.add("highlighted-route");
+
+          routePolylines.forEach((polyline, polyIndex) => {
+            if (polyIndex !== index) {
+              polyline.setMap(null);
+            }
+          });
+        });
+
+        routeInfo.appendChild(routeElement);
+      });
+
+      map.setCenter(routes[0].legs[0].start_location);
+      map.setZoom(14);
+    }
 
     function calculateCO2Emission(distanceInKm, mode, fuelType) {
       const emissions = {
         "PETROL": {
-          "DRIVING": 0.114,  
+          "DRIVING": 0.114,
         },
         "DIESEL": {
-          "DRIVING": 0.097,  
+          "DRIVING": 0.097,
         },
         "ELECTRIC": {
-          "DRIVING": 0,    
+          "DRIVING": 0,
         },
         "CNG": {
           "DRIVING": 0.080,
@@ -351,75 +344,50 @@ function displayRoutes(routes, mode, fuelType, enableTraffic) {
         }
       });
     }
-//     document.getElementById("download-static-map").addEventListener("click", () => {
-//     if (!routePolylines[selectedRouteIndex]) {
-//       alert("Please plan a route before downloading.");
-//       return;
-//     }
 
-//     const selectedRoutePath = routePolylines[selectedRouteIndex].getPath();
-//     const coordinates = [];
-//     selectedRoutePath.forEach((latLng) => {
-//       coordinates.push(`${latLng.lat()},${latLng.lng()}`);
-//     });
+    document.getElementById("download-pdf").addEventListener("click", async () => {
+      if (!routePolylines[selectedRouteIndex]) {
+        alert("Please plan a route before downloading.");
+        return;
+      }
 
-//     const pathString = coordinates.join("|");
+      const selectedRoutePath = routePolylines[selectedRouteIndex].getPath();
+      const coordinates = [];
+      selectedRoutePath.forEach((latLng) => {
+        coordinates.push(`${latLng.lat()},${latLng.lng()}`);
+      });
 
-//     const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?key={{ google_maps_api_key }}
-// &size=1280x720
-// &path=color:0x0000ff|weight:5|${pathString}
-// &markers=color:green|label:S|${coordinates[0]} 
-// &markers=color:red|label:E|${coordinates[coordinates.length - 1]}`;
+      const pathString = coordinates.join("|");
 
-//     const link = document.createElement("a");
-//     link.href = staticMapUrl;
-//     link.download = "route_map.png";
-//     link.click();
-//   });
-
-  document.getElementById("download-pdf").addEventListener("click", async () => {
-    if (!routePolylines[selectedRouteIndex]) {
-      alert("Please plan a route before downloading.");
-      return;
-    }
-
-    const selectedRoutePath = routePolylines[selectedRouteIndex].getPath();
-    const coordinates = [];
-    selectedRoutePath.forEach((latLng) => {
-      coordinates.push(`${latLng.lat()},${latLng.lng()}`);
-    });
-
-    const pathString = coordinates.join("|");
-
-    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?key={{ google_maps_api_key }}
+      const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?key={{ google_maps_api_key }}
 &size=1920x1080
 &scale=2
 &path=color:0x0000ff|weight:5|${pathString}
 &markers=color:green|label:S|${coordinates[0]}
 &markers=color:red|label:E|${coordinates[coordinates.length - 1]}`;
 
-    try {
-      const response = await fetch(staticMapUrl);
-      const blob = await response.blob();
-      const imgUrl = URL.createObjectURL(blob);
+      try {
+        const response = await fetch(staticMapUrl);
+        const blob = await response.blob();
+        const imgUrl = URL.createObjectURL(blob);
 
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({
-        orientation: "landscape",
-        unit: "px",
-        format: [1920, 1080],
-      });
-      const img = new Image();
-      img.src = imgUrl;
-      img.onload = function () {
-        pdf.addImage(img, "PNG", 0, 0, 1920, 1080);
-        pdf.save("RouteMap.pdf");
-      };
-    } catch (error) {
-      console.error("Error generating the PDF:", error);
-      alert("Failed to generate the PDF. Please try again.");
-    }
-  });
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation: "landscape",
+          unit: "px",
+          format: [1920, 1080],
+        });
+        const img = new Image();
+        img.src = imgUrl;
+        img.onload = function () {
+          pdf.addImage(img, "PNG", 0, 0, 1920, 1080);
+          pdf.save("RouteMap.pdf");
+        };
+      } catch (error) {
+        console.error("Error generating the PDF:", error);
+        alert("Failed to generate the PDF. Please try again.");
+      }
+    });
   </script>
 </body>
 
