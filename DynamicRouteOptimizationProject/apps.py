@@ -271,7 +271,6 @@ def get_route_from_google_maps(start_coords, end_coords):
         print(f"Error fetching routes from Google Maps: {e}")
         return {}
 
-
 def calculate_emissions(distance_km):
     """
     Calculate emissions based on the distance.
